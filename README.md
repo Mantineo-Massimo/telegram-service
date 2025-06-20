@@ -123,5 +123,5 @@ python run.py
 
 ## 📄 License / Licenza
 
-Questo progetto è rilasciato sotto licenza **MIT**.  
-This project is released under the **MIT License**.
+> This project is released under the [MIT License](LICENSE).  
+> Questo progetto è distribuito sotto licenza [Licenza MIT](LICENSE).
