@@ -1,6 +1,11 @@
 # telegram-kiosk-display
 
-**Python** | **MIT License** | **Status: UI, Docker**
+![Python](https://img.shields.io/badge/python-3.11-blue)
+![License: MIT](https://img.shields.io/badge/license-MIT-blue.svg)
+![Status](https://img.shields.io/badge/status-production--ready-brightgreen)
+![UI](https://img.shields.io/badge/interface-responsive-lightgrey)
+![Docker](https://img.shields.io/badge/container-Docker--ready-blue)
+
 
 ## EN / IT
 
