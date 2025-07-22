@@ -17,11 +17,14 @@ COPY app    ./app
 COPY web    ./web
 COPY run.py .env   ./
 
+# AGGIUNGI QUESTA RIGA: Copia il file di configurazione di Gunicorn
+COPY gunicorn.conf.py .
+
 # EN/IT: Create data dir (optional)
 RUN mkdir -p data && chmod -R 777 data
 
 # EN/IT: Expose Flask port
 EXPOSE 8080
 
-# EN/IT: Start Gunicorn on the WSGI app in run.py
-CMD ["gunicorn", "--bind", "0.0.0.0:8080", "run:application"]
+# EN/IT: Start Gunicorn on the WSGI app in run.py using gevent workers
+CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8080", "run:application"]

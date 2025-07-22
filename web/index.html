@@ -1,35 +1,24 @@
-<!--
-EN: Main page displaying rotating messages, live clock, classroom name and date.
-IT: Pagina principale che mostra messaggi in rotazione, orologio live, nome aula e data.
--->
 <!DOCTYPE html>
 <html lang="en">
 <head>
   <meta charset="UTF-8">
+  <meta http-equiv="refresh" content="101">
   <title>Rotating Messages</title>
   <link rel="icon" href="../assets/favicon.ico" />
   <link rel="stylesheet" href="/static/css/style.css">
 </head>
 <body>
-  <!-- EN: Header with channel title    IT: Intestazione con titolo canale -->
   <div id="title" class="title">Channel</div>
 
   <div class="container">
-    <!-- EN: Message content            IT: Contenuto messaggio -->
     <div id="content" class="message">Loading...</div>
-    <!-- EN: Message author             IT: Autore messaggio -->
     <div id="author" class="author"></div>
-    <!-- EN: Message date               IT: Data messaggio -->
     <div id="date" class="date"></div>
-    <!-- EN: Progress bar container      IT: Contenitore barre progresso -->
     <div id="progress-bar" class="progress-container"></div>
   </div>
 
-  <!-- EN: Live clock                  IT: Orologio live -->
   <div id="clock" class="top-right"></div>
-  <!-- EN: Classroom name              IT: Nome aula -->
   <div id="classroom-name" class="bottom-right"></div>
-  <!-- EN: Current date                IT: Data corrente -->
   <div id="current-date" class="bottom-left"></div>
 
   <script src="/static/js/script.js"></script>

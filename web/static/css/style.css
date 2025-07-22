@@ -115,3 +115,13 @@ body {
   20%  { transform: translateY(0%); }
   100% { transform: translateY(-80%); }
 }
+
+/* Quando il body ha la classe 'lang-en', nascondi tutti gli span 'lang-it' */
+body.lang-en .lang-it {
+  display: none;
+}
+
+/* Quando il body ha la classe 'lang-it', nascondi tutti gli span 'lang-en' */
+body.lang-it .lang-en {
+  display: none;
+}
