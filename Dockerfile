@@ -1,30 +1,28 @@
-# ==============================================================================
-# EN: Dockerfile for telegram-kiosk-display (production, Gunicorn)
-# IT: Dockerfile per telegram-kiosk-display (produzione, Gunicorn)
-# ==============================================================================
-
+# Dockerfile for telegram-service (production with Gunicorn)
 FROM python:3.11-slim
 
-# EN/IT: Working directory
 WORKDIR /app
 
-# EN/IT: Install dependencies
+# Set environment variables to prevent Python from writing .pyc files
+ENV PYTHONDONTWRITEBYTECODE 1
+ENV PYTHONUNBUFFERED 1
+
+# Install dependencies
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# EN/IT: Copy code
-COPY app    ./app
-COPY web    ./web
-COPY run.py .env   ./
+# Copy application code
+COPY app ./app
+COPY ui ./ui
+COPY tools ./tools
+COPY run.py .
+COPY .env .
 
-# AGGIUNGI QUESTA RIGA: Copia il file di configurazione di Gunicorn
-COPY gunicorn.conf.py .
-
-# EN/IT: Create data dir (optional)
+# Create persistent data directory and ensure it's writable
 RUN mkdir -p data && chmod -R 777 data
 
-# EN/IT: Expose Flask port
 EXPOSE 8080
 
-# EN/IT: Start Gunicorn on the WSGI app in run.py using gevent workers
-CMD ["gunicorn", "-k", "uvicorn.workers.UvicornWorker", "--bind", "0.0.0.0:8080", "run:application"]
+# This CMD starts both the listener and Gunicorn. For robust production,
+# a process manager like supervisord is recommended to manage both processes.
+CMD sh -c "python app/telegram_listener.py & gunicorn --bind 0.0.0.0:8080 run:application"

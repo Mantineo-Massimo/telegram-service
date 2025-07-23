@@ -1,0 +1,120 @@
+/* General body and background styling */
+body {
+  margin: 0;
+  padding: 0;
+  background: url('/assets/monitor_background.png') center/cover no-repeat fixed;
+  font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+  color: #ffffff;
+  height: 100vh;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  font-size: 22px;
+  overflow: hidden;
+}
+
+/* Header title styling */
+.title {
+  font-size: 4rem;
+  font-weight: bold;
+  color: #2f69aa;
+  background-color: rgba(255, 255, 255, 0.95);
+  padding: 25px 60px;
+  border-radius: 25px;
+  margin-bottom: 40px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  animation: fadeIn 0.5s ease-in-out;
+}
+
+/* Main message container */
+.container {
+  background-color: rgba(47, 105, 170, 0.88);
+  padding: 60px 70px;
+  border-radius: 30px;
+  max-width: 1200px;
+  width: 90%;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  text-align: center;
+}
+
+/* Message content text */
+.message {
+  font-size: 2.5rem;
+  line-height: 1.6;
+  margin-bottom: 35px;
+  max-height: 7.2em; /* 4.5 lines * 1.6 line-height */
+  overflow: hidden;
+  position: relative;
+  display: flex;
+  align-items: flex-start;
+  justify-content: center;
+}
+.message span {
+  display: inline-block;
+  white-space: normal;
+}
+.message.scroll span {
+  animation: scroll-up 8s linear 1s forwards;
+}
+
+/* Author and timestamp styling */
+.author {
+  font-size: 2.8rem;
+  color: #ffc107;
+  font-weight: bold;
+  margin-bottom: 10px;
+}
+.date {
+  font-size: 2.3rem;
+  color: #eeeeee;
+}
+
+/* Progress bar container and items */
+.progress-container {
+  display: flex;
+  justify-content: center;
+  gap: 14px;
+  margin-top: 40px;
+}
+.progress-bar {
+  flex: 1;
+  max-width: 80px;
+  height: 14px;
+  background-color: rgba(255, 255, 255, 0.3);
+  border-radius: 7px;
+  overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  width: 0%;
+  background-color: #ffc107;
+  border-radius: 7px;
+  transition: width 0.3s ease;
+}
+.progress-bar.active .progress-fill {
+  animation: fill-progress 10s linear forwards;
+}
+.progress-bar.seen .progress-fill {
+  background-color: rgba(255, 255, 255, 0.6);
+  width: 100%;
+}
+
+/* Overlay UI elements */
+.top-right { position: absolute; top: 20px; right: 30px; font-size: 3em; font-weight: bold; }
+.bottom-right { position: absolute; bottom: 20px; right: 30px; font-size: 2em; font-weight: bold; }
+.bottom-left { position: absolute; bottom: 20px; left: 30px; font-size: 2em; font-weight: bold; }
+
+/* Keyframe animations */
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(20px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+@keyframes fill-progress {
+  from { width: 0%; }
+  to { width: 100%; }
+}
+@keyframes scroll-up {
+  0% { transform: translateY(0%); }
+  100% { transform: translateY(calc(-100% + 7em)); }
+}
