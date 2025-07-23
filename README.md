@@ -8,8 +8,7 @@
 
 Un microservizio che cattura i messaggi da chat Telegram e li espone come un feed JSON dinamico, con un'interfaccia web inclusa per la visualizzazione su display di digital signage.
 
-![Showcase](../docs/telegram-showcase.png)
-
+![Showcase del Servizio](https://github.com/Mantineo-Massimo/DigitalSignageSuite/blob/master/docs/telegram-showcase.png?raw=true)
 ---
 
 ## Descrizione
