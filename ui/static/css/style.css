@@ -2,7 +2,8 @@
 body {
   margin: 0;
   padding: 0;
-  background: url('/assets/monitor_background.png') center/cover no-repeat fixed;
+  /* MODIFICA: Corretto il percorso relativo da ../ a ../../ */
+  background: url('../../assets/monitor_background.png') center/cover no-repeat fixed;
   font-family: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   color: #ffffff;
   height: 100vh;

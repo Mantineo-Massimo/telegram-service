@@ -44,7 +44,6 @@ def serve_home():
     ui_path = os.path.abspath(os.path.join(os.path.dirname(__file__), '../../ui'))
     return send_from_directory(ui_path, 'index.html')
 
-# CORREZIONE: Corretto l'errore di battitura da "api_g_bp" a "api_bp"
 @api_bp.route('/assets/<path:filename>')
 def serve_assets(filename):
     """Serves static assets like images and icons."""

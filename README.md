@@ -63,7 +63,7 @@ Questo servizio richiede delle credenziali per connettersi a Telegram. Segui que
     ```bash
     docker compose up --build -d
     ```
-* Il servizio sarà accessibile sulla porta **8080**.
+* Il servizio è accessibile tramite il reverse proxy.
 
 ---
 
@@ -73,7 +73,7 @@ Per visualizzare il feed di una chat, apri il seguente URL nel browser, sostitue
 
 * **URL di Esempio:**
     ```
-    http://localhost:8080/?chat=-100123456789&classroom=Aula Magna
+    http://localhost/telegram/?chat=-100123456789&classroom=Aula_Magna
     ```
 
 * **Parametri Disponibili:**

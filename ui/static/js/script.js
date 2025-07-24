@@ -56,9 +56,11 @@ document.addEventListener('DOMContentLoaded', () => {
         const now = new Date();
         const lang = translations[state.currentLanguage];
         dom.clock.textContent = `${padZero(now.getHours())}:${padZero(now.getMinutes())}:${padZero(now.getSeconds())}`;
+        
         const dayName = lang.days[now.getDay()];
+        // CORREZIONE: Aggiunto di nuovo 'monthName' che era stato rimosso per errore
         const monthName = lang.months[now.getMonth()];
-        dom.currentDate.textContent = `${dayName} ${now.getDate()} ${now.getFullYear()}`;
+        dom.currentDate.textContent = `${dayName} ${now.getDate()} ${monthName} ${now.getFullYear()}`;
     }
 
     function toggleLanguage() {
@@ -124,7 +126,7 @@ document.addEventListener('DOMContentLoaded', () => {
             return;
         }
         try {
-            const response = await fetch(`/feed.json?chat=${encodeURIComponent(chatId)}`);
+            const response = await fetch(`feed.json?chat=${encodeURIComponent(chatId)}`);
             if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
             const data = await response.json();
             dom.title.textContent = data.title || "Message Feed";
