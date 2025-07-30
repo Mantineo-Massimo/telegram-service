@@ -9,6 +9,19 @@
 Un microservizio che cattura i messaggi da chat Telegram e li espone come un feed JSON dinamico, con un'interfaccia web inclusa per la visualizzazione su display di digital signage.
 
 ![Showcase del Servizio](https://github.com/Mantineo-Massimo/DigitalSignageSuite/blob/master/docs/telegram-showcase.png?raw=true)
+
+---
+
+## Indice
+
+1.  [Descrizione](#-descrizione)
+2.  [Funzionalità](#-funzionalità)
+3.  [Setup & Configurazione](#-setup&configurazione)
+4.  [Avvio](#-avvio)
+5.  [Utilizzo e URL di Esempio](#-utilizzo-e-url-di-esempio)
+6.  [Tecnologie Utilizzate](#-tecnologie-utilizzate)
+7.  [Autori](#️-autori)
+
 ---
 
 ## Descrizione
@@ -67,7 +80,7 @@ Questo servizio richiede delle credenziali per connettersi a Telegram. Segui que
 
 ---
 
-## Utilizzo
+## Utilizzo e URL di Esempio
 
 Per visualizzare il feed di una chat, apri il seguente URL nel browser, sostituendo i parametri.
 
@@ -90,3 +103,10 @@ Per visualizzare il feed di una chat, apri il seguente URL nel browser, sostitue
 * **Backend**: Python, Flask, Telethon, Gunicorn
 * **Frontend**: HTML5, CSS3, JavaScript
 * **Deployment**: Docker
+
+---
+
+## Autori
+
+Massimo Mantineo – Università degli Studi di Messina
+Francesco Mondo – Università degli Studi di Messina

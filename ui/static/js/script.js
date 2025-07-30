@@ -1,14 +1,9 @@
 /**
- * Main script for the Telegram Feed Kiosk Display.
- * - Fetches messages from the backend JSON feed.
- * - Rotates through messages with a progress bar indicator.
- * - Handles auto-scrolling for long messages.
- * - Displays a live clock and date with bilingual support.
- * - Dynamically sets a classroom name from URL parameters.
+ * Main script for the Telegram Feed Kiosk Display - Legacy Browser Compatible Version.
  */
-document.addEventListener('DOMContentLoaded', () => {
-    // --- DOM Element References ---
-    const dom = {
+document.addEventListener('DOMContentLoaded', function() {
+    // --- Riferimenti al DOM ---
+    var dom = {
         title: document.getElementById('feed-title'),
         content: document.getElementById('message-content'),
         author: document.getElementById('message-author'),
@@ -16,71 +11,70 @@ document.addEventListener('DOMContentLoaded', () => {
         progressBarContainer: document.getElementById('progress-bar-container'),
         clock: document.getElementById('live-clock'),
         classroomName: document.getElementById('classroom-name'),
-        currentDate: document.getElementById('current-date')
+        currentDate: document.getElementById('current-date'),
+        body: document.body
     };
 
-    // --- State and Configuration ---
-    let state = {
+    // --- Stato e Configurazione Centralizzati ---
+    var state = {
         messages: [],
         currentIndex: 0,
-        currentLanguage: 'it'
-    };
-    const config = {
-        messageRotationInterval: 10000, // 10 seconds
-        feedUpdateInterval: 5000,       // 5 seconds
-        languageToggleInterval: 15000,  // 15 seconds
-        languages: ['it', 'en']
+        currentLanguage: 'it',
+        params: new URLSearchParams(window.location.search)
     };
 
-    // --- Language Data ---
-    const translations = {
+    var config = {
+        messageRotationInterval: 10, // in secondi
+        feedUpdateInterval: 60,      // in secondi
+        languageToggleInterval: 15,  // in secondi
+    };
+
+    var translations = {
         it: {
             days: ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
-            months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
+            months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
+            loading: "Caricamento messaggi...",
+            missingChat: "Parametro 'chat' mancante nell'URL.",
+            loadingError: "Impossibile caricare i messaggi."
         },
         en: {
             days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
+            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
+            loading: "Loading messages...",
+            missingChat: "Missing 'chat' parameter in URL.",
+            loadingError: "Could not load messages."
         }
     };
-    
-    // --- Utility Functions ---
-    const getUrlParam = (name) => new URLSearchParams(window.location.search).get(name);
-    const padZero = (n) => (n < 10 ? "0" : "") + n;
-    const formatMarkdown = (text) => text
-        .replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>')
-        .replace(/\*(.*?)\*/g, '<em>$1</em>');
 
-    // --- Core Functions ---
-    function updateClockAndDate() {
-        const now = new Date();
-        const lang = translations[state.currentLanguage];
-        dom.clock.textContent = `${padZero(now.getHours())}:${padZero(now.getMinutes())}:${padZero(now.getSeconds())}`;
-        
-        const dayName = lang.days[now.getDay()];
-        // CORREZIONE: Aggiunto di nuovo 'monthName' che era stato rimosso per errore
-        const monthName = lang.months[now.getMonth()];
-        dom.currentDate.textContent = `${dayName} ${now.getDate()} ${monthName} ${now.getFullYear()}`;
+    var padZero = function(n) { return String(n).padStart(2, '0'); };
+    var formatMarkdown = function(text) { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); };
+
+    function updateClock() {
+        var now = new Date();
+        dom.clock.textContent = padZero(now.getHours()) + ':' + padZero(now.getMinutes()) + ':' + padZero(now.getSeconds());
     }
 
+    function updateStaticUI() {
+        var lang = translations[state.currentLanguage];
+        var now = new Date();
+        var dayName = lang.days[now.getDay()];
+        var monthName = lang.months[now.getMonth()];
+        dom.currentDate.textContent = dayName + ' ' + now.getDate() + ' ' + monthName + ' ' + now.getFullYear();
+        dom.classroomName.textContent = state.params.get("classroom") || "Kiosk Display";
+    }
+    
     function toggleLanguage() {
-        const currentIndex = config.languages.indexOf(state.currentLanguage);
-        const nextIndex = (currentIndex + 1) % config.languages.length;
-        state.currentLanguage = config.languages[nextIndex];
-        updateClockAndDate();
+        state.currentLanguage = (state.currentLanguage === 'en') ? 'it' : 'en';
+        dom.body.className = 'lang-' + state.currentLanguage;
+        updateStaticUI();
     }
     
-    function setupClassroomName() {
-        const classroomNameFromUrl = getUrlParam("classroom");
-        dom.classroomName.textContent = classroomNameFromUrl || "Kiosk Display";
-    }
-
     function createProgressBars(total) {
         dom.progressBarContainer.innerHTML = "";
-        for (let i = 0; i < total; i++) {
-            const barWrapper = document.createElement("div");
+        for (var i = 0; i < total; i++) {
+            var barWrapper = document.createElement("div");
             barWrapper.className = 'progress-bar';
-            const fill = document.createElement("div");
+            var fill = document.createElement("div");
             fill.className = 'progress-fill';
             barWrapper.appendChild(fill);
             dom.progressBarContainer.appendChild(barWrapper);
@@ -88,8 +82,8 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     function updateProgressBars() {
-        const bars = dom.progressBarContainer.children;
-        for (let i = 0; i < bars.length; i++) {
+        var bars = dom.progressBarContainer.children;
+        for (var i = 0; i < bars.length; i++) {
             bars[i].classList.remove('active', 'seen');
             if (i < state.currentIndex) {
                 bars[i].classList.add('seen');
@@ -101,58 +95,85 @@ document.addEventListener('DOMContentLoaded', () => {
 
     function displayMessage() {
         if (state.messages.length === 0) return;
+        
         state.currentIndex = state.currentIndex % state.messages.length;
-        const msg = state.messages[state.currentIndex];
-        dom.content.innerHTML = `<span>${formatMarkdown(msg.content)}</span>`;
+        var msg = state.messages[state.currentIndex];
+        
+        dom.content.innerHTML = '<span>' + formatMarkdown(msg.content) + '</span>';
         dom.author.textContent = msg.author;
         dom.timestamp.textContent = msg.timestamp;
+
         dom.content.classList.remove('scroll');
-        setTimeout(() => {
-            const contentHeight = dom.content.clientHeight;
-            const spanHeight = dom.content.querySelector('span').clientHeight;
+        setTimeout(function() {
+            var contentHeight = dom.content.clientHeight;
+            var span = dom.content.querySelector('span');
+            var spanHeight = span ? span.clientHeight : 0;
             if (spanHeight > contentHeight) {
                 dom.content.classList.add('scroll');
             }
         }, 100);
+
         updateProgressBars();
         state.currentIndex++;
     }
 
-    async function fetchMessages() {
-        const chatId = getUrlParam("chat");
+    function fetchMessages() {
+        var chatId = state.params.get("chat");
         if (!chatId) {
             dom.title.textContent = "Error";
-            dom.content.textContent = "Missing 'chat' parameter in URL.";
+            dom.content.textContent = translations[state.currentLanguage].missingChat;
             return;
         }
-        try {
-            const response = await fetch(`feed.json?chat=${encodeURIComponent(chatId)}`);
-            if (!response.ok) throw new Error(`HTTP error! Status: ${response.status}`);
-            const data = await response.json();
-            dom.title.textContent = data.title || "Message Feed";
-            if (JSON.stringify(data.messages) !== JSON.stringify(state.messages)) {
-                state.messages = data.messages || [];
-                state.currentIndex = 0;
-                createProgressBars(state.messages.length);
-                if (state.messages.length > 0) {
-                    displayMessage();
+
+        fetch('feed.json?chat=' + encodeURIComponent(chatId))
+            .then(function(response) {
+                if (!response.ok) {
+                    throw new Error('HTTP error! Status: ' + response.status);
                 }
-            }
-        } catch (error) {
-            console.error("Error fetching messages:", error);
-            dom.content.textContent = "Could not load messages.";
-        }
+                return response.json();
+            })
+            .then(function(data) {
+                dom.title.textContent = data.title || "Message Feed";
+                if (JSON.stringify(data.messages) !== JSON.stringify(state.messages)) {
+                    state.messages = data.messages || [];
+                    state.currentIndex = 0;
+                    createProgressBars(state.messages.length);
+                    if (state.messages.length > 0) {
+                        displayMessage();
+                    } else {
+                        dom.content.textContent = translations[state.currentLanguage].noLessons;
+                    }
+                }
+            })
+            .catch(function(error) {
+                console.error("Error fetching messages:", error);
+                dom.content.textContent = translations[state.currentLanguage].loadingError;
+            });
     }
 
-    // --- Initialization ---
     function init() {
+        dom.body.className = 'lang-' + state.currentLanguage;
+        updateStaticUI();
+        dom.content.textContent = translations[state.currentLanguage].loading;
+
         fetchMessages();
-        updateClockAndDate();
-        setupClassroomName();
-        setInterval(displayMessage, config.messageRotationInterval);
-        setInterval(fetchMessages, config.feedUpdateInterval);
-        setInterval(updateClockAndDate, 1000);
-        setInterval(toggleLanguage, config.languageToggleInterval);
+        
+        var secondsCounter = 0;
+        
+        setInterval(function() {
+            secondsCounter++;
+            updateClock();
+
+            if (secondsCounter % config.messageRotationInterval === 0) {
+                displayMessage();
+            }
+            if (secondsCounter % config.languageToggleInterval === 0) {
+                toggleLanguage();
+            }
+            if (secondsCounter % config.feedUpdateInterval === 0) {
+                fetchMessages();
+            }
+        }, 1000);
     }
 
     init();
