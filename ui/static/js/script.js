@@ -1,5 +1,5 @@
 /**
- * Main script for the Telegram Feed Kiosk Display - Legacy Browser Compatible Version.
+ * Main script for the Telegram Feed Kiosk Display - Robust & Legacy Browser Compatible Version.
  */
 document.addEventListener('DOMContentLoaded', function() {
     // --- Riferimenti al DOM ---
@@ -24,9 +24,9 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     var config = {
-        messageRotationInterval: 10, // in secondi
-        feedUpdateInterval: 60,      // in secondi
-        languageToggleInterval: 15,  // in secondi
+        messageRotationInterval: 10,
+        feedUpdateInterval: 60,
+        languageToggleInterval: 15,
     };
 
     var translations = {
@@ -35,18 +35,21 @@ document.addEventListener('DOMContentLoaded', function() {
             months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
             loading: "Caricamento messaggi...",
             missingChat: "Parametro 'chat' mancante nell'URL.",
-            loadingError: "Impossibile caricare i messaggi."
+            loadingError: "Impossibile caricare i messaggi.",
+            noMessages: "Nessun messaggio da visualizzare."
         },
         en: {
             days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
             months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
             loading: "Loading messages...",
             missingChat: "Missing 'chat' parameter in URL.",
-            loadingError: "Could not load messages."
+            loadingError: "Could not load messages.",
+            noMessages: "No messages to display."
         }
     };
 
-    var padZero = function(n) { return String(n).padStart(2, '0'); };
+    // Correzione per compatibilità
+    var padZero = function(n) { return n < 10 ? '0' + n : String(n); };
     var formatMarkdown = function(text) { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); };
 
     function updateClock() {
@@ -117,40 +120,55 @@ document.addEventListener('DOMContentLoaded', function() {
         state.currentIndex++;
     }
 
+    // Aggiunto try...catch per robustezza
     function fetchMessages() {
-        var chatId = state.params.get("chat");
-        if (!chatId) {
-            dom.title.textContent = "Error";
-            dom.content.textContent = translations[state.currentLanguage].missingChat;
-            return;
-        }
+        try {
+            var chatId = state.params.get("chat");
+            if (!chatId) {
+                dom.title.textContent = "Error";
+                dom.content.textContent = translations[state.currentLanguage].missingChat;
+                return;
+            }
 
-        fetch('feed.json?chat=' + encodeURIComponent(chatId))
-            .then(function(response) {
-                if (!response.ok) {
-                    throw new Error('HTTP error! Status: ' + response.status);
-                }
-                return response.json();
-            })
-            .then(function(data) {
-                dom.title.textContent = data.title || "Message Feed";
-                if (JSON.stringify(data.messages) !== JSON.stringify(state.messages)) {
-                    state.messages = data.messages || [];
-                    state.currentIndex = 0;
-                    createProgressBars(state.messages.length);
-                    if (state.messages.length > 0) {
-                        displayMessage();
-                    } else {
-                        dom.content.textContent = translations[state.currentLanguage].noLessons;
+            fetch('feed.json?chat=' + encodeURIComponent(chatId))
+                .then(function(response) {
+                    if (!response.ok) {
+                        throw new Error('HTTP error! Status: ' + response.status);
                     }
-                }
-            })
-            .catch(function(error) {
-                console.error("Error fetching messages:", error);
-                dom.content.textContent = translations[state.currentLanguage].loadingError;
-            });
+                    return response.json();
+                })
+                .then(function(data) {
+                    dom.title.textContent = data.title || "Message Feed";
+                    if (JSON.stringify(data.messages) !== JSON.stringify(state.messages)) {
+                        state.messages = data.messages || [];
+                        state.currentIndex = 0;
+                        createProgressBars(state.messages.length);
+                        if (state.messages.length > 0) {
+                            displayMessage();
+                        } else {
+                            dom.content.textContent = translations[state.currentLanguage].noMessages;
+                        }
+                    }
+                })
+                .catch(function(error) {
+                    console.error("Error fetching messages:", error);
+                    dom.content.textContent = translations[state.currentLanguage].loadingError;
+                });
+        } catch (e) {
+            console.error("Errore critico in fetchMessages:", e);
+        }
     }
 
+        // --- Logica per la Schermata di Caricamento ---
+    // Aspetta che l'intera pagina (immagini, stili, etc.) sia completamente caricata
+    window.onload = function() {
+        var loader = document.getElementById('loader');
+        if (loader) {
+            // Aggiunge la classe 'hidden' per far scomparire il loader con una transizione
+            loader.classList.add('hidden');
+        }
+    };
+    
     function init() {
         dom.body.className = 'lang-' + state.currentLanguage;
         updateStaticUI();
@@ -160,20 +178,30 @@ document.addEventListener('DOMContentLoaded', function() {
         
         var secondsCounter = 0;
         
+        // Aggiunto try...catch per robustezza
         setInterval(function() {
-            secondsCounter++;
-            updateClock();
+            try {
+                secondsCounter++;
+                updateClock();
 
-            if (secondsCounter % config.messageRotationInterval === 0) {
-                displayMessage();
-            }
-            if (secondsCounter % config.languageToggleInterval === 0) {
-                toggleLanguage();
-            }
-            if (secondsCounter % config.feedUpdateInterval === 0) {
-                fetchMessages();
+                if (secondsCounter % config.messageRotationInterval === 0) {
+                    displayMessage();
+                }
+                if (secondsCounter % config.languageToggleInterval === 0) {
+                    toggleLanguage();
+                }
+                if (secondsCounter % config.feedUpdateInterval === 0) {
+                    fetchMessages();
+                }
+            } catch (e) {
+                console.error("Errore nell'intervallo principale:", e);
             }
         }, 1000);
+
+        // Aggiunto ricaricamento pagina per stabilità
+        setTimeout(function() { 
+            window.location.reload(true); 
+        }, 4 * 60 * 60 * 1000);
     }
 
     init();
