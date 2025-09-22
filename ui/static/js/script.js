@@ -1,5 +1,5 @@
 /**
- * Main script for the Telegram Feed Kiosk Display - Robust & Legacy Browser Compatible Version.
+ * Main script for the Telegram Feed Kiosk Display - UNIFIED TIME FINAL VERSION
  */
 document.addEventListener('DOMContentLoaded', function() {
     // --- Riferimenti al DOM ---
@@ -20,27 +20,26 @@ document.addEventListener('DOMContentLoaded', function() {
         messages: [],
         currentIndex: 0,
         currentLanguage: 'it',
-        params: new URLSearchParams(window.location.search)
+        params: new URLSearchParams(window.location.search),
+        timeDifference: 0 // Differenza tra ora server e ora locale
     };
 
     var config = {
         messageRotationInterval: 10,
         feedUpdateInterval: 60,
         languageToggleInterval: 15,
+        timeServiceUrl: 'http://172.16.32.13/api/time/',
+        dataRefreshInterval: 5 * 60
     };
 
     var translations = {
         it: {
-            days: ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
-            months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"],
             loading: "Caricamento messaggi...",
             missingChat: "Parametro 'chat' mancante nell'URL.",
             loadingError: "Impossibile caricare i messaggi.",
             noMessages: "Nessun messaggio da visualizzare."
         },
         en: {
-            days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
-            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"],
             loading: "Loading messages...",
             missingChat: "Missing 'chat' parameter in URL.",
             loadingError: "Could not load messages.",
@@ -48,21 +47,57 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     };
 
-    // Correzione per compatibilità
-    var padZero = function(n) { return n < 10 ? '0' + n : String(n); };
     var formatMarkdown = function(text) { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); };
 
-    function updateClock() {
-        var now = new Date();
-        dom.clock.textContent = padZero(now.getHours()) + ':' + padZero(now.getMinutes()) + ':' + padZero(now.getSeconds());
+    // Funzione per sincronizzare l'orario con il server
+    function syncTimeWithServer() {
+        fetch(config.timeServiceUrl)
+            .then(function(response) {
+                if (!response.ok) throw new Error('Time API not responding');
+                return response.json();
+            })
+            .then(function(data) {
+                var serverNow = new Date(data.time);
+                var clientNow = new Date();
+                state.timeDifference = serverNow - clientNow;
+                dom.clock.style.color = '';
+                console.log('Time synchronized. Server/client difference:', state.timeDifference, 'ms');
+            })
+            .catch(function(error) {
+                console.error('Could not sync time with server:', error);
+                state.timeDifference = 0;
+                dom.clock.style.color = 'red';
+            });
+    }
+
+    // MODIFICATO: Ora aggiorna sia orologio che data usando l'ora locale di Roma
+    function updateTimeDisplay() {
+        var serverTime = new Date(new Date().getTime() + state.timeDifference);
+        
+        // --- Orologio (ora locale di Roma) ---
+        var clockOptions = {
+            timeZone: 'Europe/Rome',
+            hour: '2-digit',
+            minute: '2-digit',
+            second: '2-digit',
+            hour12: false
+        };
+        dom.clock.textContent = serverTime.toLocaleTimeString('it-IT', clockOptions);
+
+        // --- Data (data locale di Roma) ---
+        var dateOptions = {
+            timeZone: 'Europe/Rome',
+            weekday: 'long',
+            year: 'numeric',
+            month: 'long',
+            day: 'numeric'
+        };
+        var locale = (state.currentLanguage === 'it') ? 'it-IT' : 'en-GB';
+        var formattedDate = serverTime.toLocaleDateString(locale, dateOptions);
+        dom.currentDate.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
     }
 
     function updateStaticUI() {
-        var lang = translations[state.currentLanguage];
-        var now = new Date();
-        var dayName = lang.days[now.getDay()];
-        var monthName = lang.months[now.getMonth()];
-        dom.currentDate.textContent = dayName + ' ' + now.getDate() + ' ' + monthName + ' ' + now.getFullYear();
         dom.classroomName.textContent = state.params.get("classroom") || "Kiosk Display";
     }
     
@@ -120,7 +155,6 @@ document.addEventListener('DOMContentLoaded', function() {
         state.currentIndex++;
     }
 
-    // Aggiunto try...catch per robustezza
     function fetchMessages() {
         try {
             var chatId = state.params.get("chat");
@@ -158,13 +192,10 @@ document.addEventListener('DOMContentLoaded', function() {
             console.error("Errore critico in fetchMessages:", e);
         }
     }
-
-        // --- Logica per la Schermata di Caricamento ---
-    // Aspetta che l'intera pagina (immagini, stili, etc.) sia completamente caricata
+    
     window.onload = function() {
         var loader = document.getElementById('loader');
         if (loader) {
-            // Aggiunge la classe 'hidden' per far scomparire il loader con una transizione
             loader.classList.add('hidden');
         }
     };
@@ -174,15 +205,15 @@ document.addEventListener('DOMContentLoaded', function() {
         updateStaticUI();
         dom.content.textContent = translations[state.currentLanguage].loading;
 
+        syncTimeWithServer();
         fetchMessages();
         
         var secondsCounter = 0;
         
-        // Aggiunto try...catch per robustezza
         setInterval(function() {
             try {
                 secondsCounter++;
-                updateClock();
+                updateTimeDisplay();
 
                 if (secondsCounter % config.messageRotationInterval === 0) {
                     displayMessage();
@@ -193,12 +224,14 @@ document.addEventListener('DOMContentLoaded', function() {
                 if (secondsCounter % config.feedUpdateInterval === 0) {
                     fetchMessages();
                 }
+                if (secondsCounter % config.dataRefreshInterval === 0) {
+                    syncTimeWithServer();
+                }
             } catch (e) {
                 console.error("Errore nell'intervallo principale:", e);
             }
         }, 1000);
-
-        // Aggiunto ricaricamento pagina per stabilità
+        
         setTimeout(function() { 
             window.location.reload(true); 
         }, 4 * 60 * 60 * 1000);
