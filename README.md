@@ -41,8 +41,7 @@ Questo servizio ha un'architettura unica a due processi che operano in parallelo
 
 ```mermaid
 graph TD
-        A[Telethon API]
-    end
+    A[Telethon API]
 
     subgraph "Digital Signage Suite"
         D{Proxy Nginx}
