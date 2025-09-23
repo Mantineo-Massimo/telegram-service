@@ -1,5 +1,28 @@
+# EN: The core web framework for the API.
+# IT: Il framework web principale per l'API.
 Flask==2.3.3
+
+# EN: Asynchronous library to interact with the Telegram API.
+# IT: Libreria asincrona per interagire con l'API di Telegram.
 Telethon==1.34.0
+
+# EN: Production-ready WSGI server to run the Flask app.
+# IT: Server WSGI per produzione per eseguire l'app Flask.
 gunicorn==21.2.0
+
+# EN: Library to load environment variables from a .env file.
+# IT: Libreria per caricare le variabili d'ambiente da un file .env.
 python-dotenv==1.0.0
+
+# EN: Simple profanity filter for text.
+# IT: Semplice filtro per le volgarità nel testo.
 better-profanity==0.7.0
+
+# EN: Added for rate limiting and security.
+# IT: Aggiunti per rate limiting e sicurezza.
+Flask-Limiter
+Flask-Cors
+
+# EN: Python client for Redis, required by Flask-Limiter for storage.
+# IT: Client Python per Redis, richiesto da Flask-Limiter per la memorizzazione.
+redis

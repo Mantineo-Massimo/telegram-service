@@ -1,127 +1,153 @@
 /**
- * Main script for the Telegram Feed Kiosk Display - UNIFIED TIME FINAL VERSION
+ * EN:
+ * Main script for the Telegram feed display.
+ * This script fetches messages from a Telegram channel via the backend,
+ * displays them one by one in a carousel-style rotation, and handles
+ * progress bars, a live clock, and other dynamic UI elements.
+ *
+ * IT:
+ * Script principale per il display del feed di Telegram.
+ * Questo script recupera i messaggi da un canale Telegram tramite il backend,
+ * li mostra uno a uno in una rotazione stile carosello e gestisce
+ * le barre di progresso, un orologio in tempo reale e altri elementi dinamici della UI.
  */
 document.addEventListener('DOMContentLoaded', function() {
-    // --- Riferimenti al DOM ---
-    var dom = {
+
+    // EN: Centralized object for DOM element references for performance and clarity.
+    // IT: Oggetto centralizzato per i riferimenti agli elementi del DOM per performance e chiarezza.
+    const dom = {
         title: document.getElementById('feed-title'),
         content: document.getElementById('message-content'),
         author: document.getElementById('message-author'),
         timestamp: document.getElementById('message-timestamp'),
-        progressBarContainer: document.getElementById('progress-bar-container'),
+        progressContainer: document.getElementById('progress-bar-container'),
         clock: document.getElementById('live-clock'),
+        date: document.getElementById('current-date'),
+        loader: document.getElementById('loader'),
         classroomName: document.getElementById('classroom-name'),
-        currentDate: document.getElementById('current-date'),
         body: document.body
     };
 
-    // --- Stato e Configurazione Centralizzati ---
-    var state = {
+    // EN: Centralized state management object to hold dynamic data.
+    // IT: Oggetto centralizzato per la gestione dello stato per contenere dati dinamici.
+    const state = {
         messages: [],
         currentIndex: 0,
-        currentLanguage: 'it',
-        params: new URLSearchParams(window.location.search),
-        timeDifference: 0 // Differenza tra ora server e ora locale
+        chatId: null,
+        carouselInterval: null,
+        currentLanguage: 'it' // EN: Start with Italian / IT: Inizia con l'italiano
     };
 
-    var config = {
-        messageRotationInterval: 10,
-        feedUpdateInterval: 60,
-        languageToggleInterval: 15,
-        timeServiceUrl: 'http://172.16.32.13/api/time/',
-        dataRefreshInterval: 5 * 60
+    // EN: Static configuration values for timings and intervals.
+    // IT: Valori di configurazione statici per tempistiche e intervalli.
+    const config = {
+        messageDuration: 10000, // EN: 10 seconds per message / IT: 10 secondi per messaggio
+        dataRefreshInterval: 5 * 60 * 1000, // EN: 5 minutes / IT: 5 minuti
+        languageToggleInterval: 15 // EN: 15 seconds / IT: 15 secondi
     };
 
-    var translations = {
+    // EN: Object containing all translation strings with correct capitalization.
+    // IT: Oggetto contenente tutte le stringhe di traduzione con le maiuscole corrette.
+    const translations = {
         it: {
-            loading: "Caricamento messaggi...",
-            missingChat: "Parametro 'chat' mancante nell'URL.",
-            loadingError: "Impossibile caricare i messaggi.",
-            noMessages: "Nessun messaggio da visualizzare."
+            days: ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
+            months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
         },
         en: {
-            loading: "Loading messages...",
-            missingChat: "Missing 'chat' parameter in URL.",
-            loadingError: "Could not load messages.",
-            noMessages: "No messages to display."
+            days: ["Sunday", "Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday"],
+            months: ["January", "February", "March", "April", "May", "June", "July", "August", "September", "October", "November", "December"]
         }
     };
 
-    var formatMarkdown = function(text) { return text.replace(/\*\*(.*?)\*\*/g, '<strong>$1</strong>').replace(/\*(.*?)\*/g, '<em>$1</em>'); };
+    /**
+     * EN: Fetches the message feed from the backend API for the configured chat ID.
+     * IT: Recupera il feed dei messaggi dall'API del backend per l'ID della chat configurato.
+     */
+    async function fetchFeed() {
+        if (!state.chatId) {
+            console.error("Chat ID is not set. Cannot fetch feed.");
+            dom.content.textContent = "Error: 'chat' parameter is missing in the URL.";
+            return;
+        }
+        try {
+            const response = await fetch(`/telegram/feed.json?chat=${state.chatId}`);
+            if (!response.ok) {
+                throw new Error(`HTTP error! status: ${response.status}`);
+            }
+            const data = await response.json();
+            state.messages = data.messages || [];
+            if (dom.title) dom.title.textContent = data.title || "Telegram Feed";
 
-    // Funzione per sincronizzare l'orario con il server
-    function syncTimeWithServer() {
-        fetch(config.timeServiceUrl)
-            .then(function(response) {
-                if (!response.ok) throw new Error('Time API not responding');
-                return response.json();
-            })
-            .then(function(data) {
-                var serverNow = new Date(data.time);
-                var clientNow = new Date();
-                state.timeDifference = serverNow - clientNow;
-                dom.clock.style.color = '';
-                console.log('Time synchronized. Server/client difference:', state.timeDifference, 'ms');
-            })
-            .catch(function(error) {
-                console.error('Could not sync time with server:', error);
-                state.timeDifference = 0;
-                dom.clock.style.color = 'red';
-            });
-    }
-
-    // MODIFICATO: Ora aggiorna sia orologio che data usando l'ora locale di Roma
-    function updateTimeDisplay() {
-        var serverTime = new Date(new Date().getTime() + state.timeDifference);
-        
-        // --- Orologio (ora locale di Roma) ---
-        var clockOptions = {
-            timeZone: 'Europe/Rome',
-            hour: '2-digit',
-            minute: '2-digit',
-            second: '2-digit',
-            hour12: false
-        };
-        dom.clock.textContent = serverTime.toLocaleTimeString('it-IT', clockOptions);
-
-        // --- Data (data locale di Roma) ---
-        var dateOptions = {
-            timeZone: 'Europe/Rome',
-            weekday: 'long',
-            year: 'numeric',
-            month: 'long',
-            day: 'numeric'
-        };
-        var locale = (state.currentLanguage === 'it') ? 'it-IT' : 'en-GB';
-        var formattedDate = serverTime.toLocaleDateString(locale, dateOptions);
-        dom.currentDate.textContent = formattedDate.charAt(0).toUpperCase() + formattedDate.slice(1);
-    }
-
-    function updateStaticUI() {
-        dom.classroomName.textContent = state.params.get("classroom") || "Kiosk Display";
-    }
-    
-    function toggleLanguage() {
-        state.currentLanguage = (state.currentLanguage === 'en') ? 'it' : 'en';
-        dom.body.className = 'lang-' + state.currentLanguage;
-        updateStaticUI();
-    }
-    
-    function createProgressBars(total) {
-        dom.progressBarContainer.innerHTML = "";
-        for (var i = 0; i < total; i++) {
-            var barWrapper = document.createElement("div");
-            barWrapper.className = 'progress-bar';
-            var fill = document.createElement("div");
-            fill.className = 'progress-fill';
-            barWrapper.appendChild(fill);
-            dom.progressBarContainer.appendChild(barWrapper);
+            if (state.messages.length === 0) {
+                dom.content.textContent = "No messages found in this feed.";
+            } else {
+                setupCarousel();
+            }
+        } catch (error) {
+            console.error("Failed to fetch feed:", error);
+            dom.content.textContent = "Could not load messages. Please check the connection and Chat ID.";
+        } finally {
+            if (dom.loader) dom.loader.classList.add('hidden');
         }
     }
 
+    /**
+     * EN: Sets up the carousel by creating progress bars and starting the message rotation.
+     * IT: Imposta il carosello creando le barre di progresso e avviando la rotazione dei messaggi.
+     */
+    function setupCarousel() {
+        dom.progressContainer.innerHTML = '';
+        state.messages.forEach(() => {
+            const bar = document.createElement('div');
+            bar.className = 'progress-bar';
+            bar.innerHTML = '<div class="progress-fill"></div>';
+            dom.progressContainer.appendChild(bar);
+        });
+
+        clearInterval(state.carouselInterval);
+        state.currentIndex = 0;
+        displayMessage();
+        state.carouselInterval = setInterval(nextMessage, config.messageDuration);
+    }
+
+    /**
+     * EN: Displays the message at the current index and updates the UI.
+     * IT: Mostra il messaggio all'indice corrente e aggiorna la UI.
+     */
+    function displayMessage() {
+        const msg = state.messages[state.currentIndex];
+        if (!msg) return;
+
+        dom.content.innerHTML = `<span>${msg.content.replace(/\n/g, '<br>')}</span>`;
+        dom.author.textContent = msg.author;
+        dom.timestamp.textContent = msg.timestamp;
+
+        const contentSpan = dom.content.querySelector('span');
+        if (contentSpan && contentSpan.scrollHeight > dom.content.clientHeight) {
+            dom.content.classList.add('scroll');
+        } else {
+            dom.content.classList.remove('scroll');
+        }
+
+        updateProgressBars();
+    }
+
+    /**
+     * EN: Moves to the next message in the carousel, looping back to the start.
+     * IT: Passa al messaggio successivo nel carosello, tornando all'inizio alla fine.
+     */
+    function nextMessage() {
+        state.currentIndex = (state.currentIndex + 1) % state.messages.length;
+        displayMessage();
+    }
+
+    /**
+     * EN: Updates the progress bars to reflect the currently displayed message.
+     * IT: Aggiorna le barre di progresso per riflettere il messaggio attualmente visualizzato.
+     */
     function updateProgressBars() {
-        var bars = dom.progressBarContainer.children;
-        for (var i = 0; i < bars.length; i++) {
+        const bars = dom.progressContainer.children;
+        for (let i = 0; i < bars.length; i++) {
             bars[i].classList.remove('active', 'seen');
             if (i < state.currentIndex) {
                 bars[i].classList.add('seen');
@@ -131,110 +157,74 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     }
 
-    function displayMessage() {
-        if (state.messages.length === 0) return;
-        
-        state.currentIndex = state.currentIndex % state.messages.length;
-        var msg = state.messages[state.currentIndex];
-        
-        dom.content.innerHTML = '<span>' + formatMarkdown(msg.content) + '</span>';
-        dom.author.textContent = msg.author;
-        dom.timestamp.textContent = msg.timestamp;
+    /**
+     * EN: Updates the live clock and date display in the corners of the screen.
+     * IT: Aggiorna l'orologio e la data in tempo reale negli angoli dello schermo.
+     */
+    function updateClockAndDate() {
+        const now = new Date();
+        const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Europe/Rome' };
+        dom.clock.textContent = now.toLocaleTimeString('it-IT', timeOptions);
 
-        dom.content.classList.remove('scroll');
-        setTimeout(function() {
-            var contentHeight = dom.content.clientHeight;
-            var span = dom.content.querySelector('span');
-            var spanHeight = span ? span.clientHeight : 0;
-            if (spanHeight > contentHeight) {
-                dom.content.classList.add('scroll');
-            }
-        }, 100);
-
-        updateProgressBars();
-        state.currentIndex++;
+        // EN: Manually construct the date string using translations for correct capitalization.
+        // IT: Costruisce manualmente la stringa della data usando le traduzioni per la maiuscola corretta.
+        const lang = translations[state.currentLanguage];
+        const dayName = lang.days[now.getDay()];
+        const monthName = lang.months[now.getMonth()];
+        dom.date.textContent = `${dayName}, ${now.getDate()} ${monthName} ${now.getFullYear()}`;
     }
 
-    function fetchMessages() {
-        try {
-            var chatId = state.params.get("chat");
-            if (!chatId) {
-                dom.title.textContent = "Error";
-                dom.content.textContent = translations[state.currentLanguage].missingChat;
-                return;
-            }
-
-            fetch('feed.json?chat=' + encodeURIComponent(chatId))
-                .then(function(response) {
-                    if (!response.ok) {
-                        throw new Error('HTTP error! Status: ' + response.status);
-                    }
-                    return response.json();
-                })
-                .then(function(data) {
-                    dom.title.textContent = data.title || "Message Feed";
-                    if (JSON.stringify(data.messages) !== JSON.stringify(state.messages)) {
-                        state.messages = data.messages || [];
-                        state.currentIndex = 0;
-                        createProgressBars(state.messages.length);
-                        if (state.messages.length > 0) {
-                            displayMessage();
-                        } else {
-                            dom.content.textContent = translations[state.currentLanguage].noMessages;
-                        }
-                    }
-                })
-                .catch(function(error) {
-                    console.error("Error fetching messages:", error);
-                    dom.content.textContent = translations[state.currentLanguage].loadingError;
-                });
-        } catch (e) {
-            console.error("Errore critico in fetchMessages:", e);
-        }
+    /**
+     * EN: Toggles the display language between Italian and English.
+     * IT: Alterna la lingua di visualizzazione tra italiano e inglese.
+     */
+    function toggleLanguage() {
+        state.currentLanguage = (state.currentLanguage === 'it') ? 'en' : 'en';
+        dom.body.className = 'lang-' + state.currentLanguage;
+        // EN: Update date immediately after language change.
+        // IT: Aggiorna la data immediatamente dopo il cambio di lingua.
+        updateClockAndDate();
     }
-    
-    window.onload = function() {
-        var loader = document.getElementById('loader');
-        if (loader) {
-            loader.classList.add('hidden');
-        }
-    };
-    
+
+    /**
+     * EN: Initialization function that runs once the page is loaded.
+     * IT: Funzione di inizializzazione che viene eseguita una volta caricata la pagina.
+     */
     function init() {
         dom.body.className = 'lang-' + state.currentLanguage;
-        updateStaticUI();
-        dom.content.textContent = translations[state.currentLanguage].loading;
 
-        syncTimeWithServer();
-        fetchMessages();
-        
-        var secondsCounter = 0;
-        
-        setInterval(function() {
-            try {
-                secondsCounter++;
-                updateTimeDisplay();
+        const urlParams = new URLSearchParams(window.location.search);
+        state.chatId = urlParams.get('chat');
 
-                if (secondsCounter % config.messageRotationInterval === 0) {
-                    displayMessage();
-                }
-                if (secondsCounter % config.languageToggleInterval === 0) {
-                    toggleLanguage();
-                }
-                if (secondsCounter % config.feedUpdateInterval === 0) {
-                    fetchMessages();
-                }
-                if (secondsCounter % config.dataRefreshInterval === 0) {
-                    syncTimeWithServer();
-                }
-            } catch (e) {
-                console.error("Errore nell'intervallo principale:", e);
+        const classroom = urlParams.get('classroom');
+        if (classroom && dom.classroomName) {
+            dom.classroomName.textContent = classroom;
+        }
+
+        updateClockAndDate();
+        fetchFeed();
+
+        let secondsCounter = 0;
+        setInterval(() => {
+            secondsCounter++;
+            updateClockAndDate();
+
+            // EN: Toggle language at the specified interval.
+            // IT: Cambia la lingua all'intervallo specificato.
+            if (secondsCounter % config.languageToggleInterval === 0) {
+                toggleLanguage();
+            }
+
+            // EN: Refresh data periodically.
+            // IT: Aggiorna i dati periodicamente.
+            if (secondsCounter % (config.dataRefreshInterval / 1000) === 0) {
+                fetchFeed();
             }
         }, 1000);
-        
-        setTimeout(function() { 
-            window.location.reload(true); 
-        }, 4 * 60 * 60 * 1000);
+
+        // EN: Full page reload every few hours to prevent long-term issues.
+        // IT: Ricarica completa della pagina ogni qualche ora per prevenire problemi a lungo termine.
+        setTimeout(() => window.location.reload(true), 4 * 60 * 60 * 1000);
     }
 
     init();

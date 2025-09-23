@@ -1,8 +1,14 @@
-/* General body and background styling */
+/*
+ * EN: Main stylesheet for the Telegram feed display.
+ * IT: Foglio di stile principale per il display del feed di Telegram.
+ */
+
+/* ==========================================================================
+   General Body and Layout
+   ========================================================================== */
 body {
   margin: 0;
   padding: 0;
-  /* MODIFICA: Corretto il percorso relativo da ../ a ../../ */
   background: url('../../assets/monitor_background.png') center/cover no-repeat fixed;
   font-family: 'Calibri','Segoe UI', 'Helvetica Neue', Arial, sans-serif;
   color: #ffffff;
@@ -14,7 +20,10 @@ body {
   overflow: hidden;
 }
 
-/* Header title styling */
+/* ==========================================================================
+   Content Blocks
+   ========================================================================== */
+/* EN: The main title of the feed. / IT: Il titolo principale del feed. */
 .title {
   font-size: 4rem;
   font-weight: bold;
@@ -27,7 +36,7 @@ body {
   animation: fadeIn 0.5s ease-in-out;
 }
 
-/* Main message container */
+/* EN: The main container for the message content. / IT: Il contenitore principale per il contenuto del messaggio. */
 .container {
   background-color: rgba(47, 105, 170, 0.88);
   padding: 60px 70px;
@@ -38,7 +47,7 @@ body {
   text-align: center;
 }
 
-/* Message content text */
+/* EN: Styles for the message text itself. / IT: Stili per il testo del messaggio. */
 .message {
   font-size: 2.5rem;
   line-height: 1.6;
@@ -46,19 +55,16 @@ body {
   max-height: 7.2em; /* 4.5 lines * 1.6 line-height */
   overflow: hidden;
   position: relative;
-  display: flex;
-  align-items: flex-start;
-  justify-content: center;
 }
-.message span {
-  display: inline-block;
-  white-space: normal;
-}
+
+/* EN: A class added by JS to trigger the scrolling animation for long messages. */
+/* IT: Classe aggiunta via JS per attivare l'animazione di scorrimento per messaggi lunghi. */
 .message.scroll span {
+  display: inline-block; /* Required for transform */
   animation: scroll-up 8s linear 1s forwards;
 }
 
-/* Author and timestamp styling */
+/* EN: Styles for the message author and date. / IT: Stili per l'autore e la data del messaggio. */
 .author {
   font-size: 2.8rem;
   color: #ffc107;
@@ -70,7 +76,9 @@ body {
   color: #eeeeee;
 }
 
-/* Progress bar container and items */
+/* ==========================================================================
+   Progress Bar Carousel
+   ========================================================================== */
 .progress-container {
   display: flex;
   justify-content: center;
@@ -90,24 +98,28 @@ body {
   width: 0%;
   background-color: #ffc107;
   border-radius: 7px;
-  transition: width 0.3s ease;
 }
+/* EN: The `active` class triggers the fill animation. / IT: La classe `active` avvia l'animazione di riempimento. */
 .progress-bar.active .progress-fill {
   animation: fill-progress 10s linear forwards;
 }
+/* EN: The `seen` class marks bars of messages already viewed. / IT: La classe `seen` marca le barre dei messaggi già visti. */
 .progress-bar.seen .progress-fill {
   background-color: rgba(255, 255, 255, 0.6);
   width: 100%;
-} 
+}
 
+/* ==========================================================================
+   Loading Spinner
+   ========================================================================== */
 #loader {
-    position: absolute;
+    position: fixed;
     top: 0;
     left: 0;
     width: 100%;
     height: 100%;
     z-index: 9999;
-    background-color: #0a2b5e; /* Colore blu scuro standard */
+    background-color: #0a2b5e;
     display: flex;
     justify-content: center;
     align-items: center;
@@ -115,12 +127,10 @@ body {
     visibility: visible;
     transition: opacity 1s ease, visibility 1s ease;
 }
-
 #loader.hidden {
     opacity: 0;
     visibility: hidden;
 }
-
 .spinner-container {
     position: relative;
     width: 300px;
@@ -129,37 +139,36 @@ body {
     justify-content: center;
     align-items: center;
 }
-
 .spinner {
     position: absolute;
     width: 100%;
     height: 100%;
     border: 12px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #FFFFFF; /* Colore bianco */
+    border-top-color: #FFFFFF;
     border-radius: 50%;
     animation: spin 1s infinite ease-in-out;
 }
-
 .spinner-logo {
     width: 250px;
     height: auto;
 }
 
-@keyframes spin {
-    to { transform: rotate(360deg); }
-}
-
-/* Elementi overlay (orologio, data, ecc.) */
+/* ==========================================================================
+   Overlay Elements
+   ========================================================================== */
 .top-right, .bottom-left, .bottom-right {
   position: absolute;
   font-weight: bold;
   color: #ffffff;
+  text-shadow: 2px 2px 8px rgba(0, 0, 0, 0.5);
 }
 .top-right { top: 20px; right: 30px; font-size: 6em; }
 .bottom-left { bottom: 40px; left: 30px; font-size: 4em; }
 .bottom-right { bottom: 40px; right: 30px; font-size: 4em; text-align: right; }
 
-/* Keyframe animations */
+/* ==========================================================================
+   Keyframe Animations
+   ========================================================================== */
 @keyframes fadeIn {
   from { opacity: 0; transform: translateY(20px); }
   to { opacity: 1; transform: translateY(0); }
@@ -168,7 +177,12 @@ body {
   from { width: 0%; }
   to { width: 100%; }
 }
+/* EN: Animation for scrolling long messages vertically. */
+/* IT: Animazione per lo scorrimento verticale dei messaggi lunghi. */
 @keyframes scroll-up {
   0% { transform: translateY(0%); }
-  100% { transform: translateY(calc(-100% + 7em)); }
+  100% { transform: translateY(calc(-100% + 7em)); /* EN: Scroll up until last few lines are visible. / IT: Scorre in su finché le ultime righe sono visibili. */ }
+}
+@keyframes spin {
+    to { transform: rotate(360deg); }
 }
