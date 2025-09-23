@@ -41,8 +41,7 @@ Questo servizio ha un'architettura unica a due processi che operano in parallelo
 
 ```mermaid
 graph TD
-    subgraph "Internet"
-        A[Telegram API]
+        A[Telethon API]
     end
 
     subgraph "Digital Signage Suite (Rete Docker)"
@@ -54,8 +53,6 @@ graph TD
             C[Processo 2: API Flask/Gunicorn] -- Legge i messaggi da --> R;
         end
     end
-
-    subgraph "Client (es. Monitor)"
         U[Display]
     end
 
