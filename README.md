@@ -54,8 +54,6 @@ graph TD
         end
     end
         U[Display]
-    end
-
     A -- 1. Notifica in tempo reale --> B;
     U -- 2. Richiesta HTTP periodica --> D;
     D -- 3. Inoltra la richiesta a --> C;
