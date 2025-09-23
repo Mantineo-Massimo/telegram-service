@@ -166,7 +166,7 @@ L'installazione richiede alcuni passaggi di configurazione manuale per l'autenti
 
 ---
 
-## Accesso e Link Utili 🔗
+## Accesso e Link Utili
 Una volta avviato, il servizio è accessibile tramite il proxy Nginx.
 
 - **Pagina di Visualizzazione**:
