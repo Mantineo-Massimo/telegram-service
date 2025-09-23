@@ -100,35 +100,35 @@ Il progetto è organizzato per separare la logica dell'applicazione, la configur
 
 ```
 telegram-service/
-├── app/                  # Codice sorgente dell'applicazione
-│   ├── api/              # Definizione delle rotte Flask
-│   │   └── routes.py     # Endpoint per API (/feed.json, /health) e per servire la UI
-│   ├── services/         # Logica di business
-│   │   ├── author_resolver.py # Funzione per trovare il nome dell'autore di un messaggio
-│   │   └── feed_handler.py    # Gestione della cache dei messaggi su Redis
-│   ├── __init__.py       # Application factory, crea e configura l'app Flask
-│   ├── config.py         # Gestione configurazione da file .env
-│   ├── telegram_client.py# Istanza condivisa del client Telethon
-│   └── telegram_listener.py # Logica del listener che ascolta i messaggi in tempo reale
+├── app/                        # Codice sorgente dell'applicazione
+│   ├── api/                    # Definizione delle rotte Flask
+│   │   └── routes.py           # Endpoint per API (/feed.json, /health) e per servire la UI
+│   ├── services/               # Logica di business
+│   │   ├── author_resolver.py  # Funzione per trovare il nome dell'autore di un messaggio
+│   │   └── feed_handler.py     # Gestione della cache dei messaggi su Redis
+│   ├── __init__.py             # Application factory, crea e configura l'app Flask
+│   ├── config.py               # Gestione configurazione da file .env
+│   ├── telegram_client.py      # Istanza condivisa del client Telethon
+│   └── telegram_listener.py    # Logica del listener che ascolta i messaggi in tempo reale
 │
-├── tests/                # Test automatici con pytest
+├── tests/                      # Test automatici con pytest
 │   ├── __init__.py
-│   └── test_telegram_api.py # Test per gli endpoint API
+│   └── test_telegram_api.py    # Test per gli endpoint API
 │
-├── tools/                # Script di utilità per il setup iniziale
-│   ├── get_chat_id.py      # Trova l'ID numerico di una chat Telegram
-│   └── get_session_string.py # Genera la stringa di sessione per l'autenticazione
+├── tools/                      # Script di utilità per il setup iniziale
+│   ├── get_chat_id.py          # Trova l'ID numerico di una chat Telegram
+│   └── get_session_string.py   # Genera la stringa di sessione per l'autenticazione
 │
-├── ui/                   # File del front-end (HTML, CSS, JS)
-│   ├── assets/           # Immagini, icone, ecc.
-│   ├── static/           # File CSS e JavaScript
-│   └── index.html        # Pagina principale del display
+├── ui/                         # File del front-end (HTML, CSS, JS)
+│   ├── assets/                 # Immagini, icone, ecc.
+│   ├── static/                 # File CSS e JavaScript
+│   └── index.html              # Pagina principale del display
 │
-├── .env.example          # File di esempio per le variabili d'ambiente
-├── Dockerfile            # Istruzioni per costruire l'immagine Docker del servizio
-├── requirements.txt      # Elenco delle dipendenze Python
-├── supervisord.conf      # Configurazione per gestire i processi listener e gunicorn
-└── run.py                # Punto di ingresso per avviare il server Gunicorn
+├── .env.example                # File di esempio per le variabili d'ambiente
+├── Dockerfile                  # Istruzioni per costruire l'immagine Docker del servizio
+├── requirements.txt            # Elenco delle dipendenze Python
+├── supervisord.conf            # Configurazione per gestire i processi listener e gunicorn
+└── run.py                      # Punto di ingresso per avviare il server Gunicorn
 ```
 ---
 
@@ -198,7 +198,12 @@ Una volta avviato, il servizio è accessibile tramite il proxy Nginx.
 ---
 
 ## Esecuzione dei Test
-Assicurati che lo stack Docker sia in esecuzione. Poi, esegui i test per questo servizio:
+
+I test di integrazione verificano che gli endpoint principali si comportino come previsto.
+
+**Prerequisiti:** Lo stack Docker deve essere in esecuzione.
+
+Per lanciare i test, esegui questo comando dalla cartella principale `DigitalSignageSuite`:
 ```bash
 cd telegram-service
 pytest
@@ -208,12 +213,13 @@ pytest
 
 ## Come Contribuire
 
-I contributi sono sempre i benvenuti!
+I contributi sono sempre i benvenuti! Per contribuire:
 1.  Fai un fork del repository.
 2.  Crea un nuovo branch (`git checkout -b feature/nome-feature`).
 3.  Fai le tue modifiche e assicurati che i test passino (`pytest`).
-4.  Apri una Pull Request.
-
+4.  Fai il commit delle tue modifiche (`git commit -am 'Aggiungi nuova feature'`).
+5.  Fai il push sul tuo branch (`git push origin feature/nome-feature`).
+6.  Apri una Pull Request.
 ---
 
 ## Licenza
