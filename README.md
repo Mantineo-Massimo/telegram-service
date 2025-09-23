@@ -37,20 +37,35 @@ Questo servizio risolve la necessità di mostrare dinamicamente annunci e messag
 
 ## Diagramma dell'Architettura
 
-A differenza degli altri servizi, il `telegram-service` opera con **due processi principali** all'interno dello stesso container, gestiti da `supervisord` per garantire la stabilità:
-
-1.  **Listener Telethon (`telegram_listener.py`)**: Un processo persistente che mantiene una connessione attiva con l'API di Telegram, ascoltando i nuovi messaggi in tempo reale. Quando un messaggio arriva, lo formatta e lo salva nella cache di Redis.
-2.  **Server API (Gunicorn + Flask)**: Un server web che espone un endpoint `/feed.json`. I display interrogano questo endpoint per recuperare i messaggi dalla cache di Redis e visualizzarli.
+Questo servizio ha un'architettura unica a due processi che operano in parallelo all'interno dello stesso container, gestiti da `supervisord`.
 
 ```mermaid
 graph TD
-    subgraph Container Telegram-Service
-        A[Listener Telethon] -->|Salva Messaggio| B(Redis Cache);
-        C[API Flask] -->|Leggi Messaggi| B;
+    subgraph "Internet"
+        A[Telegram API]
     end
-    D[Telegram API] --> A;
-    E{Proxy Nginx} --> C;
+
+    subgraph "Digital Signage Suite (Rete Docker)"
+        D{Proxy Nginx}
+
+        subgraph Container telegram-service
+            direction LR
+            B[Processo 1: Listener Telethon] -- Salva nuovi messaggi su --> R[Redis Cache];
+            C[Processo 2: API Flask/Gunicorn] -- Legge i messaggi da --> R;
+        end
+    end
+
+    subgraph "Client (es. Monitor)"
+        U[Display]
+    end
+
+    A -- 1. Notifica in tempo reale --> B;
+    U -- 2. Richiesta HTTP periodica --> D;
+    D -- 3. Inoltra la richiesta a --> C;
 ```
+1.  Il **Listener** riceve i nuovi messaggi da Telegram e li salva istantaneamente in **Redis**.
+2.  Un **Display** chiede periodicamente i nuovi messaggi al **Proxy Nginx**.
+3.  Nginx inoltra la richiesta all'**API Flask**, che legge i messaggi da **Redis** e li restituisce al display.
 
 ---
 
@@ -80,31 +95,40 @@ graph TD
 ---
 
 ## Struttura della Directory
+
+Il progetto è organizzato per separare la logica dell'applicazione, la configurazione, i test e l'interfaccia utente.
+
 ```
 telegram-service/
 ├── app/                  # Codice sorgente dell'applicazione
 │   ├── api/              # Definizione delle rotte Flask
-│   ├── services/         # Logica di business (gestione feed, risoluzione autore)
-│   ├── __init__.py       # Application factory
-│   ├── config.py         # Gestione configurazione da .env
+│   │   └── routes.py     # Endpoint per API (/feed.json, /health) e per servire la UI
+│   ├── services/         # Logica di business
+│   │   ├── author_resolver.py # Funzione per trovare il nome dell'autore di un messaggio
+│   │   └── feed_handler.py    # Gestione della cache dei messaggi su Redis
+│   ├── __init__.py       # Application factory, crea e configura l'app Flask
+│   ├── config.py         # Gestione configurazione da file .env
 │   ├── telegram_client.py# Istanza condivisa del client Telethon
-│   └── telegram_listener.py # Logica del listener in tempo reale
+│   └── telegram_listener.py # Logica del listener che ascolta i messaggi in tempo reale
 │
 ├── tests/                # Test automatici con pytest
 │   ├── __init__.py
-│   └── test_telegram_api.py
+│   └── test_telegram_api.py # Test per gli endpoint API
 │
-├── tools/                # Script di utilità per il setup
-│   ├── get_chat_id.py
-│   └── get_session_string.py
+├── tools/                # Script di utilità per il setup iniziale
+│   ├── get_chat_id.py      # Trova l'ID numerico di una chat Telegram
+│   └── get_session_string.py # Genera la stringa di sessione per l'autenticazione
 │
 ├── ui/                   # File del front-end (HTML, CSS, JS)
+│   ├── assets/           # Immagini, icone, ecc.
+│   ├── static/           # File CSS e JavaScript
+│   └── index.html        # Pagina principale del display
 │
 ├── .env.example          # File di esempio per le variabili d'ambiente
-├── Dockerfile            # Istruzioni per costruire l'immagine Docker
-├── requirements.txt      # Dipendenze Python
-├── supervisord.conf      # Configurazione per la gestione dei processi
-└── run.py                # Punto di ingresso per Gunicorn
+├── Dockerfile            # Istruzioni per costruire l'immagine Docker del servizio
+├── requirements.txt      # Elenco delle dipendenze Python
+├── supervisord.conf      # Configurazione per gestire i processi listener e gunicorn
+└── run.py                # Punto di ingresso per avviare il server Gunicorn
 ```
 ---
 
@@ -142,7 +166,7 @@ L'installazione richiede alcuni passaggi di configurazione manuale per l'autenti
 
 ---
 
-## Accesso e Link Utili 
+## Accesso e Link Utili 🔗
 Una volta avviato, il servizio è accessibile tramite il proxy Nginx.
 
 - **Pagina di Visualizzazione**:
