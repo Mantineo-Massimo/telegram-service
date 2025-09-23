@@ -44,7 +44,7 @@ graph TD
         A[Telethon API]
     end
 
-    subgraph "Digital Signage Suite (Rete Docker)"
+    subgraph "Digital Signage Suite"
         D{Proxy Nginx}
 
         subgraph Container telegram-service
