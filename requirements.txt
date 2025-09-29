@@ -1,14 +1,21 @@
+# --- Framework Web e Server ---
 # EN: The core web framework for the API.
 # IT: Il framework web principale per l'API.
 Flask==2.3.3
 
+# EN: A production-ready WSGI server to run the Flask app.
+# IT: Un server WSGI per production per eseguire l'app Flask.
+gunicorn==21.2.0
+
+# --- Librerie Telegram ---
 # EN: Asynchronous library to interact with the Telegram API.
 # IT: Libreria asincrona per interagire con l'API di Telegram.
 Telethon==1.34.0
 
-# EN: Production-ready WSGI server to run the Flask app.
-# IT: Server WSGI per produzione per eseguire l'app Flask.
-gunicorn==21.2.0
+# --- Estensioni di Sicurezza e Utilità ---
+# EN: Flask extension for handling Cross-Origin Resource Sharing (CORS).
+# IT: Estensione Flask per la gestione del Cross-Origin Resource Sharing (CORS).
+Flask-Cors
 
 # EN: Library to load environment variables from a .env file.
 # IT: Libreria per caricare le variabili d'ambiente da un file .env.
@@ -18,11 +25,16 @@ python-dotenv==1.0.0
 # IT: Semplice filtro per le volgarità nel testo.
 better-profanity==0.7.0
 
-# EN: Added for rate limiting and security.
-# IT: Aggiunti per rate limiting e sicurezza.
-Flask-Limiter
-Flask-Cors
-
-# EN: Python client for Redis, required by Flask-Limiter for storage.
-# IT: Client Python per Redis, richiesto da Flask-Limiter per la memorizzazione.
+# --- Librerie Dati ---
+# EN: The Python client for the Redis key-value store.
+# IT: Il client Python per il key-value store Redis.
 redis
+
+# --- Librerie per i Test ---
+# EN: Framework for writing and running automated tests.
+# IT: Framework per scrivere ed eseguire test automatici.
+pytest
+
+# EN: Library for making HTTP requests, needed for integration tests.
+# IT: Libreria per fare richieste HTTP, necessaria per i test di integrazione.
+requests
