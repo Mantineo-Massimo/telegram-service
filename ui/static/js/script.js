@@ -3,15 +3,16 @@
  * Main script for the Telegram feed display.
  * This script fetches messages from a Telegram channel via the backend,
  * displays them one by one in a carousel-style rotation, and handles
- * progress bars, a live clock, and other dynamic UI elements.
+ * progress bars, a server-synced live clock, and other dynamic UI elements.
  *
  * IT:
  * Script principale per il display del feed di Telegram.
  * Questo script recupera i messaggi da un canale Telegram tramite il backend,
  * li mostra uno a uno in una rotazione stile carosello e gestisce
- * le barre di progresso, un orologio in tempo reale e altri elementi dinamici della UI.
+ * le barre di progresso, un orologio in tempo reale sincronizzato col server 
+ * e altri elementi dinamici della UI.
  */
-document.addEventListener('DOMContentLoaded', function() {
+document.addEventListener('DOMContentLoaded', function () {
 
     // EN: Centralized object for DOM element references for performance and clarity.
     // IT: Oggetto centralizzato per i riferimenti agli elementi del DOM per performance e chiarezza.
@@ -35,7 +36,8 @@ document.addEventListener('DOMContentLoaded', function() {
         currentIndex: 0,
         chatId: null,
         carouselInterval: null,
-        currentLanguage: 'it' // EN: Start with Italian / IT: Inizia con l'italiano
+        currentLanguage: 'it', // EN: Start with Italian / IT: Inizia con l'italiano
+        timeDifference: 0 // EN: Difference in ms between server and client time. / IT: Differenza in ms tra ora del server e del client.
     };
 
     // EN: Static configuration values for timings and intervals.
@@ -43,7 +45,8 @@ document.addEventListener('DOMContentLoaded', function() {
     const config = {
         messageDuration: 10000, // EN: 10 seconds per message / IT: 10 secondi per messaggio
         dataRefreshInterval: 5 * 60 * 1000, // EN: 5 minutes / IT: 5 minuti
-        languageToggleInterval: 15 // EN: 15 seconds / IT: 15 secondi
+        languageToggleInterval: 15, // EN: 15 seconds / IT: 15 secondi
+        timeServiceUrl: '/api/time/', // EN: URL for the server time API / IT: URL per l'API dell'ora del server
     };
 
     // EN: Object containing all translation strings with correct capitalization.
@@ -60,35 +63,65 @@ document.addEventListener('DOMContentLoaded', function() {
     };
 
     /**
+     * EN: Syncs the local time with the server's time to correct for client-side clock drift.
+     * IT: Sincronizza l'ora locale con quella del server per correggere imprecisioni dell'orologio del client.
+     */
+    function syncTimeWithServer() {
+        fetch(config.timeServiceUrl)
+            .then(response => {
+                if (!response.ok) throw new Error('Time API not responding');
+                return response.json();
+            })
+            .then(data => {
+                const serverNow = new Date(data.time);
+                const clientNow = new Date();
+                state.timeDifference = serverNow - clientNow;
+                console.log('Time synchronized. Server/client difference:', state.timeDifference, 'ms');
+                // EN: Reset clock color on successful sync / IT: Reimposta il colore dell'orologio in caso di successo
+                dom.clock.style.color = '';
+            })
+            .catch(error => {
+                console.error('Could not sync time with server:', error);
+                state.timeDifference = 0; // EN: Fallback to client time on error. / IT: Ripiega sull'ora del client in caso di errore.
+                dom.clock.style.color = 'red'; // EN: Indicate time sync error / IT: Indica errore di sincr. orologio
+            });
+    }
+
+    /**
      * EN: Fetches the message feed from the backend API for the configured chat ID.
      * IT: Recupera il feed dei messaggi dall'API del backend per l'ID della chat configurato.
      */
-    async function fetchFeed() {
+    function fetchFeed() {
         if (!state.chatId) {
             console.error("Chat ID is not set. Cannot fetch feed.");
             dom.content.textContent = "Error: 'chat' parameter is missing in the URL.";
             return;
         }
-        try {
-            const response = await fetch(`/telegram/feed.json?chat=${state.chatId}`);
-            if (!response.ok) {
-                throw new Error(`HTTP error! status: ${response.status}`);
-            }
-            const data = await response.json();
-            state.messages = data.messages || [];
-            if (dom.title) dom.title.textContent = data.title || "Telegram Feed";
 
-            if (state.messages.length === 0) {
-                dom.content.textContent = "No messages found in this feed.";
-            } else {
-                setupCarousel();
-            }
-        } catch (error) {
-            console.error("Failed to fetch feed:", error);
-            dom.content.textContent = "Could not load messages. Please check the connection and Chat ID.";
-        } finally {
-            if (dom.loader) dom.loader.classList.add('hidden');
-        }
+        fetch('/telegram/feed.json?chat=' + state.chatId)
+            .then(function (response) {
+                if (!response.ok) {
+                    throw new Error('HTTP error! status: ' + response.status);
+                }
+                return response.json();
+            })
+            .then(function (data) {
+                state.messages = data.messages || [];
+                if (dom.title) dom.title.textContent = data.title || "Telegram Feed";
+
+                if (state.messages.length === 0) {
+                    dom.content.textContent = "No messages found in this feed.";
+                } else {
+                    setupCarousel();
+                }
+            })
+            .catch(function (error) {
+                console.error("Failed to fetch feed:", error);
+                dom.content.textContent = "Could not load messages. Please check the connection and Chat ID.";
+            })
+            .finally(function () {
+                if (dom.loader) dom.loader.classList.add('hidden');
+            });
     }
 
     /**
@@ -158,11 +191,13 @@ document.addEventListener('DOMContentLoaded', function() {
     }
 
     /**
-     * EN: Updates the live clock and date display in the corners of the screen.
-     * IT: Aggiorna l'orologio e la data in tempo reale negli angoli dello schermo.
+     * EN: Updates the live clock and date display using server-synced time.
+     * IT: Aggiorna l'orologio e la data in tempo reale usando l'ora sincronizzata con il server.
      */
     function updateClockAndDate() {
-        const now = new Date();
+        // EN: Use server-synced time / IT: Usa l'ora sincronizzata con il server
+        const now = new Date(new Date().getTime() + state.timeDifference);
+
         const timeOptions = { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false, timeZone: 'Europe/Rome' };
         dom.clock.textContent = now.toLocaleTimeString('it-IT', timeOptions);
 
@@ -201,13 +236,16 @@ document.addEventListener('DOMContentLoaded', function() {
             dom.classroomName.textContent = classroom;
         }
 
+        // EN: Sync time first, then update clock and fetch data
+        // IT: Sincronizza l'ora, poi aggiorna l'orologio e recupera i dati
+        syncTimeWithServer();
         updateClockAndDate();
         fetchFeed();
 
         let secondsCounter = 0;
         setInterval(() => {
             secondsCounter++;
-            updateClockAndDate();
+            updateClockAndDate(); // EN: This now uses synced time / IT: Ora usa l'ora sincronizzata
 
             // EN: Toggle language at the specified interval.
             // IT: Cambia la lingua all'intervallo specificato.
@@ -215,9 +253,10 @@ document.addEventListener('DOMContentLoaded', function() {
                 toggleLanguage();
             }
 
-            // EN: Refresh data periodically.
-            // IT: Aggiorna i dati periodicamente.
+            // EN: Refresh data and re-sync time periodically.
+            // IT: Aggiorna i dati e risincronizza l'ora periodicamente.
             if (secondsCounter % (config.dataRefreshInterval / 1000) === 0) {
+                syncTimeWithServer();
                 fetchFeed();
             }
         }, 1000);

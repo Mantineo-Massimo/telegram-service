@@ -16,6 +16,7 @@ import os
 import sys
 from telethon import events
 from better_profanity import profanity
+from zoneinfo import ZoneInfo
 
 # EN: Ensure the root directory `telegram-service` is in the Python path to resolve app modules.
 # IT: Assicura che la directory radice `telegram-service` sia nel path di Python per risolvere i moduli dell'app.
@@ -46,8 +47,11 @@ async def new_message_handler(event):
     # IT: Elabora solo messaggi di testo non vuoti e senza volgarità.
     if message.text and text_is_clean(message.text):
         author = await resolve_author(message, client)
+        utc_date = message.date
+        local_date = utc_date.astimezone(ZoneInfo("Europe/Rome"))
+        
         document = {
-            "timestamp": message.date.strftime("%Y-%m-%d %H:%M:%S"),
+            "timestamp": local_date.strftime("%Y-%m-%d %H:%M:%S"), # Ora salverà l'ora italiana
             "content": message.text,
             "author": author
         }
