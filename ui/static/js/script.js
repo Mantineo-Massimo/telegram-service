@@ -16,7 +16,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // EN: Centralized object for DOM element references for performance and clarity.
     // IT: Oggetto centralizzato per i riferimenti agli elementi del DOM per performance e chiarezza.
-    const dom = {
+    var dom = {
         title: document.getElementById('feed-title'),
         content: document.getElementById('message-content'),
         author: document.getElementById('message-author'),
@@ -31,18 +31,18 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // EN: Centralized state management object to hold dynamic data.
     // IT: Oggetto centralizzato per la gestione dello stato per contenere dati dinamici.
-    const state = {
+    var state = {
         messages: [],
         currentIndex: 0,
         chatId: null,
-        carouselInterval: null,
+        carouselTimeout: null,
         currentLanguage: 'it', // EN: Start with Italian / IT: Inizia con l'italiano
         timeDifference: 0 // EN: Difference in ms between server and client time. / IT: Differenza in ms tra ora del server e del client.
     };
 
     // EN: Static configuration values for timings and intervals.
     // IT: Valori di configurazione statici per tempistiche e intervalli.
-    const config = {
+    var config = {
         messageDuration: 10000, // EN: 10 seconds per message / IT: 10 secondi per messaggio
         dataRefreshInterval: 5 * 60 * 1000, // EN: 5 minutes / IT: 5 minuti
         languageToggleInterval: 15, // EN: 15 seconds / IT: 15 secondi
@@ -51,7 +51,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
     // EN: Object containing all translation strings with correct capitalization.
     // IT: Oggetto contenente tutte le stringhe di traduzione con le maiuscole corrette.
-    const translations = {
+    var translations = {
         it: {
             days: ["Domenica", "Lunedì", "Martedì", "Mercoledì", "Giovedì", "Venerdì", "Sabato"],
             months: ["Gennaio", "Febbraio", "Marzo", "Aprile", "Maggio", "Giugno", "Luglio", "Agosto", "Settembre", "Ottobre", "Novembre", "Dicembre"]
@@ -130,17 +130,16 @@ document.addEventListener('DOMContentLoaded', function () {
      */
     function setupCarousel() {
         dom.progressContainer.innerHTML = '';
-        state.messages.forEach(() => {
-            const bar = document.createElement('div');
+        state.messages.forEach(function() {
+            var bar = document.createElement('div');
             bar.className = 'progress-bar';
             bar.innerHTML = '<div class="progress-fill"></div>';
             dom.progressContainer.appendChild(bar);
         });
 
-        clearInterval(state.carouselInterval);
+        clearTimeout(state.carouselTimeout);
         state.currentIndex = 0;
         displayMessage();
-        state.carouselInterval = setInterval(nextMessage, config.messageDuration);
     }
 
     /**
@@ -148,21 +147,39 @@ document.addEventListener('DOMContentLoaded', function () {
      * IT: Mostra il messaggio all'indice corrente e aggiorna la UI.
      */
     function displayMessage() {
-        const msg = state.messages[state.currentIndex];
+        var msg = state.messages[state.currentIndex];
         if (!msg) return;
 
-        dom.content.innerHTML = `<span>${msg.content.replace(/\n/g, '<br>')}</span>`;
+        dom.content.innerHTML = '<span>' + msg.content.replace(/\n/g, '<br>') + '</span>';
         dom.author.textContent = msg.author;
         dom.timestamp.textContent = msg.timestamp;
 
-        const contentSpan = dom.content.querySelector('span');
+        var contentSpan = dom.content.querySelector('span');
+        var messageDuration = config.messageDuration;
+
         if (contentSpan && contentSpan.scrollHeight > dom.content.clientHeight) {
             dom.content.classList.add('scroll');
+            
+            // IT: Calcola la durata in base all'altezza del testo per leggere tutto.
+            var scrollDistance = contentSpan.scrollHeight - dom.content.clientHeight;
+            var scrollTimeSec = Math.max(8, scrollDistance / 25);
+            
+            // IT: Imposta l'animazione personalizzata con andata e ritorno (alternate)
+            contentSpan.style.animation = 'scroll-vertical ' + scrollTimeSec + 's linear 1s infinite alternate';
+            
+            // IT: Tempo sufficiente per scendere e risalire
+            messageDuration = (scrollTimeSec * 2 * 1000) + 2000;
         } else {
             dom.content.classList.remove('scroll');
+            if (contentSpan) {
+                contentSpan.style.animation = 'none';
+            }
         }
 
-        updateProgressBars();
+        updateProgressBars(messageDuration);
+        
+        clearTimeout(state.carouselTimeout);
+        state.carouselTimeout = setTimeout(nextMessage, messageDuration);
     }
 
     /**
@@ -178,14 +195,20 @@ document.addEventListener('DOMContentLoaded', function () {
      * EN: Updates the progress bars to reflect the currently displayed message.
      * IT: Aggiorna le barre di progresso per riflettere il messaggio attualmente visualizzato.
      */
-    function updateProgressBars() {
-        const bars = dom.progressContainer.children;
-        for (let i = 0; i < bars.length; i++) {
+    function updateProgressBars(duration) {
+        var bars = dom.progressContainer.children;
+        for (var i = 0; i < bars.length; i++) {
             bars[i].classList.remove('active', 'seen');
+            var fill = bars[i].querySelector('.progress-fill');
+            if (fill) fill.style.animationDuration = ''; // reset
+            
             if (i < state.currentIndex) {
                 bars[i].classList.add('seen');
             } else if (i === state.currentIndex) {
                 bars[i].classList.add('active');
+                if (fill && duration) {
+                    fill.style.animationDuration = duration + 'ms';
+                }
             }
         }
     }
@@ -203,10 +226,10 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // EN: Manually construct the date string using translations for correct capitalization.
         // IT: Costruisce manualmente la stringa della data usando le traduzioni per la maiuscola corretta.
-        const lang = translations[state.currentLanguage];
-        const dayName = lang.days[now.getDay()];
-        const monthName = lang.months[now.getMonth()];
-        dom.date.textContent = `${dayName}, ${now.getDate()} ${monthName} ${now.getFullYear()}`;
+        var lang = translations[state.currentLanguage];
+        var dayName = lang.days[now.getDay()];
+        var monthName = lang.months[now.getMonth()];
+        dom.date.textContent = dayName + ', ' + now.getDate() + ' ' + monthName + ' ' + now.getFullYear();
     }
 
     /**
@@ -214,11 +237,21 @@ document.addEventListener('DOMContentLoaded', function () {
      * IT: Alterna la lingua di visualizzazione tra italiano e inglese.
      */
     function toggleLanguage() {
-        state.currentLanguage = (state.currentLanguage === 'it') ? 'en' : 'en';
+        state.currentLanguage = (state.currentLanguage === 'it') ? 'en' : 'it'; // Fixed logic too
         dom.body.className = 'lang-' + state.currentLanguage;
         // EN: Update date immediately after language change.
         // IT: Aggiorna la data immediatamente dopo il cambio di lingua.
         updateClockAndDate();
+    }
+
+    /**
+     * EN: Helper to get URL parameters without URLSearchParams (for broad compatibility).
+     */
+    function getUrlParameter(name) {
+        name = name.replace(/[\[]/, '\\[').replace(/[\]]/, '\\]');
+        var regex = new RegExp('[\\?&]' + name + '=([^&#]*)');
+        var results = regex.exec(window.location.search);
+        return results === null ? '' : decodeURIComponent(results[1].replace(/\+/g, ' '));
     }
 
     /**
@@ -228,10 +261,9 @@ document.addEventListener('DOMContentLoaded', function () {
     function init() {
         dom.body.className = 'lang-' + state.currentLanguage;
 
-        const urlParams = new URLSearchParams(window.location.search);
-        state.chatId = urlParams.get('chat');
+        state.chatId = getUrlParameter('chat');
 
-        const classroom = urlParams.get('classroom');
+        var classroom = getUrlParameter('classroom');
         if (classroom && dom.classroomName) {
             dom.classroomName.textContent = classroom;
         }
@@ -242,8 +274,8 @@ document.addEventListener('DOMContentLoaded', function () {
         updateClockAndDate();
         fetchFeed();
 
-        let secondsCounter = 0;
-        setInterval(() => {
+        var secondsCounter = 0;
+        setInterval(function() {
             secondsCounter++;
             updateClockAndDate(); // EN: This now uses synced time / IT: Ora usa l'ora sincronizzata
 
@@ -263,7 +295,7 @@ document.addEventListener('DOMContentLoaded', function () {
 
         // EN: Full page reload every few hours to prevent long-term issues.
         // IT: Ricarica completa della pagina ogni qualche ora per prevenire problemi a lungo termine.
-        setTimeout(() => window.location.reload(true), 4 * 60 * 60 * 1000);
+        setTimeout(function() { window.location.reload(true); }, 4 * 60 * 60 * 1000);
     }
 
     init();

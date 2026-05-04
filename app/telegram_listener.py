@@ -55,7 +55,10 @@ async def new_message_handler(event):
             "content": message.text,
             "author": author
         }
-        append_to_feed(event.chat_id, document)
+        # EN: Add the message to the saved feed (cache).
+        # IT: Aggiunge il messaggio al feed salvato (cache).
+        with client._app.app_context():
+            append_to_feed(event.chat_id, document)
         print(f"Message from chat {event.chat_id} processed and saved.")
 
 def start_telegram_listener():
@@ -63,10 +66,58 @@ def start_telegram_listener():
     EN: Starts the Telethon client and listens for events indefinitely. This is a blocking call.
     IT: Avvia il client Telethon e rimane in ascolto per gli eventi indefinitamente. È una chiamata bloccante.
     """
+    from app import create_app
+    app = create_app()
+    client._app = app
+    
+    async def fetch_history_for_chat(chat_id: int, limit: int = 10):
+        try:
+            from app.services.feed_handler import _write_feed_to_cache
+            chat_entity = await client.get_entity(chat_id)
+            title = getattr(chat_entity, 'title', getattr(chat_entity, 'username', 'Chat Feed'))
+            
+            messages = []
+            raw_msgs = await client.get_messages(chat_entity, limit=limit)
+            for msg in reversed(raw_msgs):
+                if not msg.text or not text_is_clean(msg.text):
+                    continue
+                author = await resolve_author(msg, client)
+                utc_date = msg.date
+                local_date = utc_date.astimezone(ZoneInfo("Europe/Rome"))
+                
+                messages.append({
+                    "timestamp": local_date.strftime("%Y-%m-%d %H:%M:%S"),
+                    "content": msg.text,
+                    "author": author or "Unknown"
+                })
+            
+            data = {"title": title, "messages": messages}
+            if data["messages"]:
+                with app.app_context():
+                    _write_feed_to_cache(chat_id, data)
+                print(f"Cache for chat {chat_id} populated via listener queue.")
+        except Exception as e:
+            print(f"Failed to fetch history for chat {chat_id}: {e}")
+
+    async def redis_fetch_worker():
+        while True:
+            try:
+                # We pop synchronously but the sleep prevents blocking loop forever
+                with app.app_context():
+                    chat_id_bytes = app.redis.lpop('telegram_fetch_queue')
+                if chat_id_bytes:
+                    chat_id = int(chat_id_bytes.decode('utf-8') if isinstance(chat_id_bytes, bytes) else chat_id_bytes)
+                    print(f"Queue requested history for chat {chat_id}")
+                    await fetch_history_for_chat(chat_id)
+            except Exception as e:
+                print(f"Error in redis fetch worker: {e}")
+            await asyncio.sleep(1)
+
     try:
         print("Telethon listener is starting...")
         client.start()
         print("Telethon listener is running and waiting for messages.")
+        client.loop.create_task(redis_fetch_worker())
         client.run_until_disconnected()
     except Exception as e:
         print(f"An error occurred in the Telethon listener: {e}")

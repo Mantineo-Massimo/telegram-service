@@ -15,9 +15,7 @@ import asyncio
 import os
 import json
 from flask import current_app
-from ..config import API_ID, API_HASH, SESSION_STRING
-from telethon.sessions import StringSession
-from telethon import TelegramClient
+
 
 def _get_redis_key(chat_id: int) -> str:
     """
@@ -79,51 +77,3 @@ def get_messages_from_cache(chat_id: int) -> dict:
     # EN: Return an empty structure if key not found or on error.
     # IT: Restituisce una struttura vuota se la chiave non è trovata o in caso di errore.
     return {"title": "Chat Feed", "messages": []}
-
-async def _fetch_live_messages(chat_id: int, limit: int = 10):
-    """
-    EN: The core async function to fetch messages live from Telegram.
-    IT: La funzione asincrona principale per recuperare messaggi in tempo reale da Telegram.
-    """
-    async with TelegramClient(StringSession(SESSION_STRING), API_ID, API_HASH) as live_client:
-        chat_entity = await live_client.get_entity(chat_id)
-        title = getattr(chat_entity, 'title', getattr(chat_entity, 'username', 'Chat Feed'))
-        
-        messages = []
-        raw_msgs = await live_client.get_messages(chat_entity, limit=limit)
-        for msg in reversed(raw_msgs):
-            if not msg.text:
-                continue
-            author = msg.post_author
-            if not author and msg.sender:
-                 sender = await live_client.get_entity(msg.sender_id)
-                 author = getattr(sender, 'username', f"{getattr(sender, 'first_name', '')} {getattr(sender, 'last_name', '')}".strip())
-            
-            messages.append({
-                "timestamp": msg.date.strftime("%Y-%m-%d %H:%M:%S"),
-                "content": msg.text,
-                "author": author or "Unknown"
-            })
-        return {"title": title, "messages": messages}
-
-def live_fetch_and_cache_messages(chat_id: int) -> dict:
-    """
-    EN: Synchronous wrapper to fetch live messages and cache them to Redis.
-    IT: Wrapper sincrono per recuperare i messaggi in tempo reale e salvarli su Redis.
-    """
-    print(f"Performing live fetch for chat {chat_id} to populate cache...")
-    try:
-        loop = asyncio.get_running_loop()
-    except RuntimeError:
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
-
-    data = loop.run_until_complete(_fetch_live_messages(chat_id))
-    
-    if data and data["messages"]:
-        # EN: Use the new function to write to Redis instead of disk.
-        # IT: Usa la nuova funzione per scrivere su Redis invece che su disco.
-        _write_feed_to_cache(chat_id, data)
-        print(f"Cache for chat {chat_id} populated successfully.")
-    
-    return data

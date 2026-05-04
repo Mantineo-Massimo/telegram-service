@@ -5,7 +5,7 @@ IT: Definisce tutti gli endpoint API HTTP per il Telegram Feed Service.
 import os
 from datetime import datetime, timedelta
 from flask import Blueprint, jsonify, request, send_from_directory, current_app
-from ..services.feed_handler import get_messages_from_cache, live_fetch_and_cache_messages
+from ..services.feed_handler import get_messages_from_cache
 
 api_bp = Blueprint('api', __name__)
 
@@ -51,10 +51,22 @@ def get_feed():
                 needs_refresh = True
 
         if needs_refresh:
-             current_app.logger.info(f"Triggering live fetch for chat {chat_id}...")
-             # EN: Fetches history from Telegram and updates the cache
-             # IT: Scarica la cronologia da Telegram e aggiorna la cache
-             data = live_fetch_and_cache_messages(chat_id)
+            # EN: Request the background listener to fetch history via Redis queue
+            # IT: Chiediamo al listener in background di recuperare lo storico tramite coda Redis
+            current_app.logger.info(f"Enqueueing fetch request for chat {chat_id}.")
+            current_app.redis.rpush('telegram_fetch_queue', chat_id)
+            
+            # Wait a short duration to see if the background worker populates it quickly
+            import time
+            for _ in range(10):
+                time.sleep(0.3)
+                data = get_messages_from_cache(chat_id)
+                if data and data.get("messages"):
+                    break
+            
+            if not data or not data.get("messages"):
+                # If still empty, return a loading indicator
+                return jsonify({"title": "Loading...", "messages": []})
 
         return jsonify(data)
 

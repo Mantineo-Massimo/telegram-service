@@ -179,9 +179,9 @@ body {
 }
 /* EN: Animation for scrolling long messages vertically. */
 /* IT: Animazione per lo scorrimento verticale dei messaggi lunghi. */
-@keyframes scroll-up {
-  0% { transform: translateY(0%); }
-  100% { transform: translateY(calc(-100% + 7em)); /* EN: Scroll up until last few lines are visible. / IT: Scorre in su finché le ultime righe sono visibili. */ }
+@keyframes scroll-vertical {
+  0%, 15% { transform: translateY(0%); }
+  85%, 100% { transform: translateY(calc(-100% + 7.2em)); }
 }
 @keyframes spin {
     to { transform: rotate(360deg); }
