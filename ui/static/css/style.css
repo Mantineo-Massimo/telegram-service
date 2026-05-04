@@ -11,13 +11,16 @@ body {
   padding: 0;
   background: url('../../assets/monitor_background.png') center/cover no-repeat fixed;
   font-family: 'Calibri','Segoe UI', 'Helvetica Neue', Arial, sans-serif;
-  color: #ffffff;
+  color: #333333; /* Darker default text */
   height: 100vh;
   display: flex;
   flex-direction: column;
   align-items: center;
   justify-content: center;
   overflow: hidden;
+
+  /* Custom Properties */
+  --message-max-height: 25vh; /* Further reduced to fit a smaller container */
 }
 
 /* ==========================================================================
@@ -25,55 +28,89 @@ body {
    ========================================================================== */
 /* EN: The main title of the feed. / IT: Il titolo principale del feed. */
 .title {
-  font-size: 4rem;
-  font-weight: bold;
-  color: #2f69aa;
-  background-color: rgba(255, 255, 255, 0.95);
-  padding: 25px 60px;
-  border-radius: 25px;
-  margin-bottom: 40px;
-  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.4);
+  font-size: 3.5rem;
+  font-weight: 900;
+  color: #ffffff; /* White text for blue background */
+  background-color: #2f69aa; /* Unime Blue */
+  padding: 20px 50px;
+  border-radius: 20px;
+  margin-bottom: 25px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.3);
   animation: fadeIn 0.5s ease-in-out;
+  text-transform: uppercase;
+  letter-spacing: 1px;
 }
 
 /* EN: The main container for the message content. / IT: Il contenitore principale per il contenuto del messaggio. */
 .container {
-  background-color: rgba(47, 105, 170, 0.88);
-  padding: 60px 70px;
-  border-radius: 30px;
-  max-width: 1200px;
-  width: 90%;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+  background-color: #ffffff;
+  padding: 30px 60px;
+  border-radius: 40px;
+  max-width: 1050px;
+  width: 82%;
+  height: 48vh; /* Reduced height to fit perfectly in the white pill area */
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  box-shadow: 0 20px 60px rgba(0, 0, 0, 0.2);
   text-align: center;
+  margin-top: -30px;
+  border: 2px solid rgba(47, 105, 170, 0.1);
+  animation: fadeIn 0.8s ease-out;
+  overflow: hidden;
 }
 
 /* EN: Styles for the message text itself. / IT: Stili per il testo del messaggio. */
 .message {
-  font-size: 2.5rem;
-  line-height: 1.6;
-  margin-bottom: 35px;
-  max-height: 7.2em; /* 4.5 lines * 1.6 line-height */
+  font-size: 2.3rem;
+  line-height: 1.5;
+  height: var(--message-max-height);
+  color: #2c3e50;
+  font-weight: 500;
   overflow: hidden;
   position: relative;
+  text-align: center;
+}
+.message span {
+  display: block;
+  width: 100%;
+}
+.message-footer {
+  margin-top: 20px;
 }
 
-/* EN: A class added by JS to trigger the scrolling animation for long messages. */
-/* IT: Classe aggiunta via JS per attivare l'animazione di scorrimento per messaggi lunghi. */
 .message.scroll span {
-  display: inline-block; /* Required for transform */
-  animation: scroll-up 8s linear 1s forwards;
+  display: inline-block;
+  width: 100%;
+}
+
+/* Custom Scrollbar for a premium look */
+.message::-webkit-scrollbar {
+  width: 10px;
+}
+.message::-webkit-scrollbar-track {
+  background: rgba(255, 255, 255, 0.1);
+  border-radius: 10px;
+}
+.message::-webkit-scrollbar-thumb {
+  background: rgba(255, 255, 255, 0.3);
+  border-radius: 10px;
+}
+.message::-webkit-scrollbar-thumb:hover {
+  background: rgba(255, 255, 255, 0.5);
 }
 
 /* EN: Styles for the message author and date. / IT: Stili per l'autore e la data del messaggio. */
 .author {
-  font-size: 2.8rem;
-  color: #ffc107;
-  font-weight: bold;
-  margin-bottom: 10px;
+  font-size: 3rem; /* Larger author name */
+  color: #2f69aa;
+  font-weight: 800; /* Extra bold */
+  margin-top: 10px;
+  margin-bottom: 5px;
 }
 .date {
-  font-size: 2.3rem;
-  color: #eeeeee;
+  font-size: 2.2rem;
+  color: #555555; /* Slightly darker date */
 }
 
 /* ==========================================================================
@@ -87,17 +124,17 @@ body {
 }
 .progress-bar {
   flex: 1;
-  max-width: 80px;
-  height: 14px;
-  background-color: rgba(255, 255, 255, 0.3);
-  border-radius: 7px;
+  max-width: 100px;
+  height: 12px;
+  background-color: rgba(47, 105, 170, 0.1); /* Subtle blue track */
+  border-radius: 6px;
   overflow: hidden;
 }
 .progress-fill {
   height: 100%;
   width: 0%;
-  background-color: #ffc107;
-  border-radius: 7px;
+  background-color: #2f69aa; /* Unime Blue instead of Yellow */
+  border-radius: 6px;
 }
 /* EN: The `active` class triggers the fill animation. / IT: La classe `active` avvia l'animazione di riempimento. */
 .progress-bar.active .progress-fill {
@@ -105,53 +142,11 @@ body {
 }
 /* EN: The `seen` class marks bars of messages already viewed. / IT: La classe `seen` marca le barre dei messaggi già visti. */
 .progress-bar.seen .progress-fill {
-  background-color: rgba(255, 255, 255, 0.6);
+  background-color: rgba(47, 105, 170, 0.4);
   width: 100%;
 }
 
-/* ==========================================================================
-   Loading Spinner
-   ========================================================================== */
-#loader {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    z-index: 9999;
-    background-color: #0a2b5e;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    opacity: 1;
-    visibility: visible;
-    transition: opacity 1s ease, visibility 1s ease;
-}
-#loader.hidden {
-    opacity: 0;
-    visibility: hidden;
-}
-.spinner-container {
-    position: relative;
-    width: 300px;
-    height: 300px;
-    display: flex;
-    justify-content: center;
-    align-items: center;
-}
-.spinner {
-    position: absolute;
-    width: 100%;
-    height: 100%;
-    border: 12px solid rgba(255, 255, 255, 0.3);
-    border-top-color: #FFFFFF;
-    border-radius: 50%;
-    animation: spin 1s infinite ease-in-out;
-}
-.spinner-logo {
-    width: 250px;
-    height: auto;
-}
+
 
 /* ==========================================================================
    Overlay Elements
@@ -177,12 +172,8 @@ body {
   from { width: 0%; }
   to { width: 100%; }
 }
-/* EN: Animation for scrolling long messages vertically. */
-/* IT: Animazione per lo scorrimento verticale dei messaggi lunghi. */
+
 @keyframes scroll-vertical {
   0%, 15% { transform: translateY(0%); }
-  85%, 100% { transform: translateY(calc(-100% + 7.2em)); }
-}
-@keyframes spin {
-    to { transform: rotate(360deg); }
+  85%, 100% { transform: translateY(calc(-100% + var(--message-max-height))); }
 }

@@ -32,22 +32,21 @@ def get_feed():
             needs_refresh = True
             current_app.logger.warning(f"Cache for chat {chat_id} is empty.")
         else:
-            # EN: Check 2: Is the data stale?
-            # IT: Controllo 2: I dati sono vecchi?
+            # EN: Check 2: Is the cache stale?
+            # IT: Controllo 2: La cache è vecchia?
             try:
-                # Prende il timestamp del primo messaggio (il più recente)
-                latest_msg_time_str = data["messages"][0]["timestamp"]
-                latest_msg_time = datetime.strptime(latest_msg_time_str, "%Y-%m-%d %H:%M:%S")
-                
-                # EN: If the latest message is older than 1 hour, try to fetch new ones.
-                # IT: Se l'ultimo messaggio è più vecchio di 1 ora, prova a scaricarne di nuovi.
-                if datetime.now() - latest_msg_time > timedelta(hours=1):
-                    current_app.logger.info(f"Data for chat {chat_id} is stale (older than 1h). Triggering live fetch.")
+                last_updated_str = data.get("last_updated")
+                if not last_updated_str:
                     needs_refresh = True
-            except (ValueError, IndexError, KeyError) as e:
-                # EN: On parsing error, force refresh to be safe.
-                # IT: In caso di errore di parsing, forza l'aggiornamento per sicurezza.
-                current_app.logger.warning(f"Error checking timestamp validity: {e}. Forcing refresh.")
+                else:
+                    last_updated = datetime.strptime(last_updated_str, "%Y-%m-%d %H:%M:%S")
+                    # EN: If the cache is older than 1 hour, try to fetch new data.
+                    # IT: Se la cache è più vecchia di 1 ora, prova a scaricare nuovi dati.
+                    if datetime.now() - last_updated > timedelta(hours=1):
+                        current_app.logger.info(f"Cache for chat {chat_id} is stale. Triggering live fetch.")
+                        needs_refresh = True
+            except Exception as e:
+                current_app.logger.warning(f"Error checking cache validity: {e}. Forcing refresh.")
                 needs_refresh = True
 
         if needs_refresh:
@@ -61,12 +60,12 @@ def get_feed():
             for _ in range(10):
                 time.sleep(0.3)
                 data = get_messages_from_cache(chat_id)
-                if data and data.get("messages"):
+                if data and data.get("messages") and data.get("last_updated"):
                     break
             
             if not data or not data.get("messages"):
-                # If still empty, return a loading indicator
-                return jsonify({"title": "Loading...", "messages": []})
+                # If still empty, return an empty structure without "Loading" text
+                return jsonify({"title": "", "messages": []})
 
         return jsonify(data)
 

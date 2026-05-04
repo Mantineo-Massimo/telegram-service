@@ -14,6 +14,9 @@ Quando un messaggio arriva, lo elabora, formatta e salva in un feed JSON locale.
 import asyncio
 import os
 import sys
+import signal
+import redis
+import socket
 from telethon import events
 from better_profanity import profanity
 from zoneinfo import ZoneInfo
@@ -70,55 +73,129 @@ def start_telegram_listener():
     app = create_app()
     client._app = app
     
-    async def fetch_history_for_chat(chat_id: int, limit: int = 10):
-        try:
-            from app.services.feed_handler import _write_feed_to_cache
-            chat_entity = await client.get_entity(chat_id)
-            title = getattr(chat_entity, 'title', getattr(chat_entity, 'username', 'Chat Feed'))
-            
-            messages = []
-            raw_msgs = await client.get_messages(chat_entity, limit=limit)
-            for msg in reversed(raw_msgs):
-                if not msg.text or not text_is_clean(msg.text):
-                    continue
-                author = await resolve_author(msg, client)
-                utc_date = msg.date
-                local_date = utc_date.astimezone(ZoneInfo("Europe/Rome"))
-                
-                messages.append({
-                    "timestamp": local_date.strftime("%Y-%m-%d %H:%M:%S"),
-                    "content": msg.text,
-                    "author": author or "Unknown"
-                })
-            
-            data = {"title": title, "messages": messages}
-            if data["messages"]:
-                with app.app_context():
-                    _write_feed_to_cache(chat_id, data)
-                print(f"Cache for chat {chat_id} populated via listener queue.")
-        except Exception as e:
-            print(f"Failed to fetch history for chat {chat_id}: {e}")
+    # EN: Configuration for the distributed lock.
+    # IT: Configurazione per il lock distribuito.
+    LOCK_KEY = "telegram:listener:lock"
+    LOCK_TTL = 30  # seconds
+    HEARTBEAT_INTERVAL = 10  # seconds
+    hostname = socket.gethostname()
 
-    async def redis_fetch_worker():
+    async def heartbeat():
+        """EN: Periodically refreshes the Redis lock. / IT: Aggiorna periodicamente il lock su Redis."""
         while True:
             try:
-                # We pop synchronously but the sleep prevents blocking loop forever
                 with app.app_context():
-                    chat_id_bytes = app.redis.lpop('telegram_fetch_queue')
-                if chat_id_bytes:
-                    chat_id = int(chat_id_bytes.decode('utf-8') if isinstance(chat_id_bytes, bytes) else chat_id_bytes)
-                    print(f"Queue requested history for chat {chat_id}")
-                    await fetch_history_for_chat(chat_id)
+                    app.redis.expire(LOCK_KEY, LOCK_TTL)
+                await asyncio.sleep(HEARTBEAT_INTERVAL)
+            except asyncio.CancelledError:
+                break
             except Exception as e:
-                print(f"Error in redis fetch worker: {e}")
-            await asyncio.sleep(1)
+                print(f"Heartbeat error: {e}")
+                await asyncio.sleep(5)
+
+    async def main_logic():
+        """EN: Core listener logic including history fetching worker."""
+        async def fetch_history_for_chat(chat_id: int, limit: int = 10):
+            try:
+                from app.services.feed_handler import _write_feed_to_cache
+                chat_entity = await client.get_entity(chat_id)
+                title = getattr(chat_entity, 'title', getattr(chat_entity, 'username', 'Chat Feed'))
+                
+                messages = []
+                raw_msgs = await client.get_messages(chat_entity, limit=limit)
+                for msg in reversed(raw_msgs):
+                    if not msg.text or not text_is_clean(msg.text):
+                        continue
+                    author = await resolve_author(msg, client)
+                    utc_date = msg.date
+                    local_date = utc_date.astimezone(ZoneInfo("Europe/Rome"))
+                    
+                    messages.append({
+                        "timestamp": local_date.strftime("%Y-%m-%d %H:%M:%S"),
+                        "content": msg.text,
+                        "author": author or "Unknown"
+                    })
+                
+                data = {"title": title, "messages": messages}
+                if data["messages"]:
+                    with app.app_context():
+                        _write_feed_to_cache(chat_id, data)
+                    print(f"Cache for chat {chat_id} populated via listener queue.")
+            except Exception as e:
+                print(f"Failed to fetch history for chat {chat_id}: {e}")
+
+        async def redis_fetch_worker():
+            while True:
+                try:
+                    with app.app_context():
+                        chat_id_bytes = app.redis.lpop('telegram_fetch_queue')
+                    if chat_id_bytes:
+                        chat_id = int(chat_id_bytes.decode('utf-8') if isinstance(chat_id_bytes, bytes) else chat_id_bytes)
+                        print(f"Queue requested history for chat {chat_id}")
+                        await fetch_history_for_chat(chat_id)
+                except Exception as e:
+                    print(f"Error in redis fetch worker: {e}")
+                await asyncio.sleep(1)
+
+        client.loop.create_task(redis_fetch_worker())
+        await client.run_until_disconnected()
+
+    def stop_signal_handler(sig, frame):
+        """EN: Handles shutdown signals. / IT: Gestisce i segnali di spegnimento."""
+        print(f"Received signal {sig}. Shutting down...")
+        asyncio.ensure_future(shutdown())
+
+    async def shutdown():
+        """EN: Gracefully disconnects and releases resources. / IT: Si disconnette correttamente e rilascia le risorse."""
+        try:
+            print("Releasing Redis lock and disconnecting...")
+            with app.app_context():
+                current_lock = app.redis.get(LOCK_KEY)
+                if current_lock and current_lock.decode('utf-8') == hostname:
+                    app.redis.delete(LOCK_KEY)
+            await client.disconnect()
+        except Exception as e:
+            print(f"Error during shutdown: {e}")
+        finally:
+            print("Shutdown complete.")
+            sys.exit(0)
+
+    # EN: Register signal handlers for graceful shutdown.
+    # IT: Registra i gestori di segnali per lo spegnimento pulito.
+    for sig in (signal.SIGTERM, signal.SIGINT):
+        signal.signal(sig, stop_signal_handler)
 
     try:
         print("Telethon listener is starting...")
+        
+        # --- ANTI-COLLISION LOCK ---
+        while True:
+            with app.app_context():
+                # EN: Try to acquire the lock. nx=True ensures only one instance gets it.
+                # IT: Prova ad acquisire il lock. nx=True assicura che solo un'istanza lo ottenga.
+                is_locked = app.redis.set(LOCK_KEY, hostname, ex=LOCK_TTL, nx=True)
+                
+                if is_locked:
+                    print(f"Lock acquired. This instance ({hostname}) is now the active listener.")
+                    break
+                else:
+                    owner = app.redis.get(LOCK_KEY)
+                    print(f"Collision detected! Listener lock is held by {owner.decode('utf-8') if owner else 'unknown'}. Waiting...")
+                    time_to_wait = 10
+            
+            # Use synchronous sleep for the outer loop to avoid complex async in start
+            import time
+            time.sleep(10)
+
         client.start()
         print("Telethon listener is running and waiting for messages.")
-        client.loop.create_task(redis_fetch_worker())
-        client.run_until_disconnected()
+        
+        # Start the heartbeat to keep the lock alive
+        client.loop.create_task(heartbeat())
+        
+        # Start the main logic
+        client.loop.run_until_complete(main_logic())
+        
     except Exception as e:
         print(f"An error occurred in the Telethon listener: {e}")
     finally:

@@ -24,7 +24,6 @@ document.addEventListener('DOMContentLoaded', function () {
         progressContainer: document.getElementById('progress-bar-container'),
         clock: document.getElementById('live-clock'),
         date: document.getElementById('current-date'),
-        loader: document.getElementById('loader'),
         classroomName: document.getElementById('classroom-name'),
         body: document.body
     };
@@ -119,9 +118,7 @@ document.addEventListener('DOMContentLoaded', function () {
                 console.error("Failed to fetch feed:", error);
                 dom.content.textContent = "Could not load messages. Please check the connection and Chat ID.";
             })
-            .finally(function () {
-                if (dom.loader) dom.loader.classList.add('hidden');
-            });
+            ;
     }
 
     /**
@@ -162,7 +159,7 @@ document.addEventListener('DOMContentLoaded', function () {
             
             // IT: Calcola la durata in base all'altezza del testo per leggere tutto.
             var scrollDistance = contentSpan.scrollHeight - dom.content.clientHeight;
-            var scrollTimeSec = Math.max(8, scrollDistance / 25);
+            var scrollTimeSec = Math.max(10, scrollDistance / 20); // Slightly slower for readability
             
             // IT: Imposta l'animazione personalizzata con andata e ritorno (alternate)
             contentSpan.style.animation = 'scroll-vertical ' + scrollTimeSec + 's linear 1s infinite alternate';
@@ -171,10 +168,11 @@ document.addEventListener('DOMContentLoaded', function () {
             messageDuration = (scrollTimeSec * 2 * 1000) + 2000;
         } else {
             dom.content.classList.remove('scroll');
-            if (contentSpan) {
-                contentSpan.style.animation = 'none';
-            }
         }
+
+        // EN: Ensure we are at the top of the message when it appears
+        // IT: Assicura di essere all'inizio del messaggio quando appare
+        dom.content.scrollTop = 0;
 
         updateProgressBars(messageDuration);
         

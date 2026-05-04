@@ -14,6 +14,7 @@ eseguire un recupero in tempo reale da Telegram se una chiave di cache non esist
 import asyncio
 import os
 import json
+from datetime import datetime
 from flask import current_app
 
 
@@ -31,6 +32,10 @@ def _write_feed_to_cache(chat_id: int, data: dict):
     """
     if "messages" in data:
         data["messages"] = data["messages"][-10:]  # Keep only the last 10
+    
+    # EN: Add a timestamp to indicate when the cache was last updated.
+    # IT: Aggiunge un timestamp per indicare quando la cache è stata aggiornata l'ultima volta.
+    data["last_updated"] = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
     
     try:
         key = _get_redis_key(chat_id)
